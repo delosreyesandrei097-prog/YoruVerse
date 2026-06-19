@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YoruVerse - Read Manhwa Online Free</title>
+  <meta name="description" content="Read the latest manhwa, manga, and webtoons online for free. Track your reading progress and discover new series.">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="./css/main.css">
+  <link rel="stylesheet" href="./css/donation.css">
+  
+  <!-- Web App Manifest -->
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/png" href="./images/O.png">
+
+  <!-- Preload above-the-fold logo + warm CDN connections used by covers -->
+  <link rel="preload" as="image" href="./images/Y.png" fetchpriority="high">
+  <link rel="preload" as="image" href="./images/O.png" fetchpriority="high">
+  <link rel="preconnect" href="https://firebasestorage.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://storage.googleapis.com" crossorigin>
+
+  
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
+</head>
+<body>
+  <!-- Loading Screen -->
+  <div class="loading-screen" id="loadingScreen">
+    <div class="spinner"></div>
+    <p>Loading YoruVerse...</p>
+  </div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-content">
+      <a href="./index.html" class="logo">
+        <div class="logo-icon"><img src="images/O.png" alt="logo" class="logo-img"></div><img src="images/Y.png" alt="YoruVerse" class="logo-text-img">
+      </a>
+
+      <div class="search-bar" id="searchBar">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search manhwa..." data-search-input>
+      </div>
+
+      <nav class="nav-links">
+        <a href="./index.html" class="nav-link active">Home</a>
+        <a href="pages/browse.html" class="nav-link">Browse</a>
+        <a href="pages/library.html" class="nav-link" data-auth-required style="display:none;">Library</a>
+      </nav>
+
+      <div class="header-actions">
+        <button class="icon-btn" id="searchToggle" title="Search">
+          <i class="fas fa-search"></i>
+        </button>
+        <button class="icon-btn" data-theme-toggle title="Toggle Theme">
+          <i class="fas fa-moon"></i>
+        </button>
+        <a href="pages/notifications.html" class="icon-btn" data-auth-required style="display:none;" title="Notifications">
+          <i class="fas fa-bell"></i>
+          <span class="notification-badge" id="notifBadge" style="display:none;"></span>
+        </a>
+
+        <a href="pages/login.html" class="btn btn-primary btn-sm" data-auth-guest>Login</a>
+        <button class="icon-btn mobile-menu-btn" data-mobile-menu-btn title="Menu">
+          <i class="fas fa-bars"></i>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Mobile Search Bar -->
+    <div class="search-bar mobile-open" id="mobileSearchBar" style="display:none;">
+      <i class="fas fa-search search-icon"></i>
+      <input type="text" placeholder="Search manhwa..." data-search-input>
+    </div>
+  </header>
+
+  <!-- Mobile Menu -->
+  <div class="mobile-menu" data-mobile-menu>
+    <div class="mobile-menu-panel">
+      <div class="mobile-menu-header">
+        <a href="./index.html" class="logo">
+          <div class="logo-icon"><img src="" alt="logo" class="logo-img"></div><img src="images/Y.png" alt="YoruVerse" class="logo-text-img">
+        </a>
+        <button class="icon-btn" data-mobile-menu-close>
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="mobile-menu-links">
+        <a href="./index.html" class="mobile-menu-link active"><i class="fas fa-home"></i> Home</a>
+        <a href="pages/browse.html" class="mobile-menu-link"><i class="fas fa-search"></i> Browse</a>
+        <a href="pages/library.html" class="mobile-menu-link" data-auth-required style="display:none;"><i class="fas fa-bookmark"></i> Library</a>
+        <a href="pages/history.html" class="mobile-menu-link" data-auth-required style="display:none;"><i class="fas fa-history"></i> History</a>
+        <a href="pages/profile.html" class="mobile-menu-link" data-auth-required style="display:none;"><i class="fas fa-user"></i> Profile</a>
+        <a href="pages/settings.html" class="mobile-menu-link" data-auth-required style="display:none;"><i class="fas fa-cog"></i> Settings</a>
+        <a href="pages/admin.html" class="mobile-menu-link" data-admin-only style="display:none;"><i class="fas fa-shield-alt"></i> Admin Dashboard</a>
+        <a href="pages/about.html" class="mobile-menu-link"><i class="fas fa-info-circle"></i> About</a>
+        <a href="#" class="mobile-menu-link" data-auth-required style="display:none;" onclick="Auth.logout(); return false;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        <a href="pages/login.html" class="mobile-menu-link" data-auth-guest><i class="fas fa-sign-in-alt"></i> Login</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <main>
+    <!-- Hero Slider Section -->
+    <section class="hero-section container">
+      <div class="hero-slider" id="heroSlider">
+        <!-- Slides will be loaded dynamically -->
+        <div class="hero-slide active" style="background: var(--bg-secondary);">
+          <div class="hero-slide-content" style="max-width:100%;text-align:center;">
+            <div class="skeleton" style="width:120px;height:32px;margin-bottom:1rem;border-radius:6px;"></div>
+            <div class="skeleton" style="width:80%;height:48px;margin-bottom:0.5rem;border-radius:8px;"></div>
+            <div class="skeleton" style="width:60%;height:20px;margin-bottom:1.5rem;border-radius:4px;"></div>
+            <div class="skeleton" style="width:200px;height:40px;border-radius:10px;"></div>
+          </div>
+        </div>
+        <div class="hero-slider-dots" id="heroDots"></div>
+      </div>
+    </section>
+
+    <!-- PWA Install Banner -->
+    <section class="container" id="pwaInstallBanner" style="display:none;margin-bottom:var(--space-2xl);">
+      <div style="display:flex;align-items:center;gap:1rem;padding:1rem 1.25rem;border-radius:14px;background:linear-gradient(135deg,var(--accent-primary,#6366f1),var(--accent-secondary,#8b5cf6));color:#fff;flex-wrap:wrap;box-shadow:0 10px 30px rgba(99,102,241,0.25);">
+        <div style="font-size:1.75rem;line-height:1;">
+          <i class="fas fa-mobile-screen-button"></i>
+        </div>
+        <div style="flex:1;min-width:180px;">
+          <div style="font-weight:700;font-size:1rem;margin-bottom:0.15rem;">Install YoruVerse</div>
+          <div style="font-size:0.85rem;opacity:0.9;">Get the app for a faster, full-screen experience.</div>
+        </div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+          <button type="button" id="pwaInstallBtn" class="btn btn-sm"
+                  style="background:#fff;color:var(--accent-primary,#6366f1);font-weight:700;border:none;padding:0.55rem 1.1rem;border-radius:8px;cursor:pointer;">
+            <i class="fas fa-download"></i> Install
+          </button>
+          <button type="button" id="pwaDismissBtn" class="btn btn-ghost btn-sm"
+                  style="background:rgba(255,255,255,0.15);color:#fff;border:none;padding:0.55rem 0.9rem;border-radius:8px;cursor:pointer;">
+            Not now
+          </button>
+        </div>
+      </div>
+    </section>
+    <script>
+      (function () {
+        var DISMISS_KEY = 'mv_pwa_install_dismissed_at';
+        var INSTALLED_KEY = 'mv_pwa_installed';
+        var DISMISS_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
+        var banner = document.getElementById('pwaInstallBanner');
+        var installBtn = document.getElementById('pwaInstallBtn');
+        var dismissBtn = document.getElementById('pwaDismissBtn');
+        var deferredPrompt = null;
+        var bannerShown = false;
+
+        function isStandalone() {
+          return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
+              || window.navigator.standalone === true;
+        }
+        function isInstalled() {
+          if (isStandalone()) return true;
+          try { return localStorage.getItem(INSTALLED_KEY) === '1'; } catch (_) { return false; }
+        }
+        function isDismissed() {
+          try {
+            var v = localStorage.getItem(DISMISS_KEY);
+            return v && (Date.now() - Number(v) < DISMISS_TTL);
+          } catch (_) { return false; }
+        }
+        function canShowBanner() {
+          return banner && !isInstalled() && !isDismissed();
+        }
+        function showBanner(mode) {
+          if (!canShowBanner() || bannerShown) return;
+          bannerShown = true;
+          banner.style.display = 'block';
+          banner.setAttribute('data-pwa-mode', mode || 'unknown');
+        }
+        function hideBanner() { if (banner) { banner.style.display = 'none'; bannerShown = false; } }
+
+        // Real install prompt available
+        window.addEventListener('beforeinstallprompt', function (e) {
+          e.preventDefault();
+          deferredPrompt = e;
+          showBanner('prompt');
+        });
+
+        if (installBtn) installBtn.addEventListener('click', async function () {
+          if (deferredPrompt) {
+            try {
+              deferredPrompt.prompt();
+              var choice = await deferredPrompt.userChoice;
+              if (choice && choice.outcome === 'accepted') {
+                try { localStorage.setItem(INSTALLED_KEY, '1'); } catch (_) {}
+              }
+            } catch (_) {}
+            deferredPrompt = null;
+            hideBanner();
+          } else {
+            // iOS / desktop browsers without prompt: show platform instructions
+            var ua = navigator.userAgent;
+            var msg;
+            if (/iphone|ipad|ipod/i.test(ua)) {
+              msg = 'To install: tap the Share button, then "Add to Home Screen".';
+            } else if (/android/i.test(ua)) {
+              msg = 'To install: open the browser menu (⋮) and tap "Install app" or "Add to Home screen".';
+            } else {
+              msg = 'To install: open the browser menu and choose "Install YoruVerse" or "Add to Home Screen".';
+            }
+            alert(msg);
+          }
+        });
+        if (dismissBtn) dismissBtn.addEventListener('click', function () {
+          try { localStorage.setItem(DISMISS_KEY, String(Date.now())); } catch (_) {}
+          hideBanner();
+        });
+        window.addEventListener('appinstalled', function () {
+          try { localStorage.setItem(INSTALLED_KEY, '1'); } catch (_) {}
+          try { localStorage.removeItem(DISMISS_KEY); } catch (_) {}
+          hideBanner();
+        });
+
+        // iOS Safari has no beforeinstallprompt — show right away
+        var isiOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !/crios|fxios/i.test(navigator.userAgent);
+        if (isiOS && canShowBanner()) showBanner('ios');
+
+        // Fallback: if no install prompt fires within 2.5s (e.g. desktop Chrome
+        // PWA criteria already met silently, or browser doesn't fire it), still
+        // surface the banner so users can find install instructions.
+        setTimeout(function () {
+          if (!bannerShown && canShowBanner()) showBanner('fallback');
+        }, 2500);
+      })();
+    </script>
+
+    <!-- Donation Banner (above Trending Now) -->
+    <section class="container" style="margin-bottom: var(--space-xl);">
+      <div class="donate-banner" id="donateBannerTop" role="button" tabindex="0"
+           onclick="Donation.open()"
+           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();Donation.open();}">
+        <div class="donate-banner__icon"><i class="fas fa-heart"></i></div>
+        <div class="donate-banner__text">
+          <p class="donate-banner__title">Support YoruVerse</p>
+          <p class="donate-banner__subtitle">Donate $1+ to unlock the <strong style="color:#f9a8d4;">DONATOR</strong> title and help fund a custom domain, hosting, and new features.</p>
+        </div>
+        <button class="donate-banner__btn" type="button" onclick="event.stopPropagation();Donation.open();">
+          <i class="fas fa-heart" style="margin-right:6px;"></i> Donate
+        </button>
+      </div>
+    </section>
+
+
+
+    <!-- Reading History Section (only visible when signed in) -->
+    <section class="container" id="readingHistorySection"
+             style="margin-bottom: var(--space-3xl); display:none;"
+             data-auth-required>
+      <div class="section-header">
+        <h2 class="section-title">
+          <div class=""><i class=""></i></div>
+          Reading History
+        </h2>
+        <a href="pages/history.html" class="view-all-link">View All <i class="fas fa-arrow-right"></i></a>
+      </div>
+      <div class="series-carousel" id="readingHistoryGrid">
+        <!-- Loaded dynamically -->
+      </div>
+    </section>
+
+    <!-- Recently Updated Section -->
+    <section class="container" style="margin-bottom: var(--space-3xl);">
+      <div class="section-header">
+        <h2 class="section-title">
+          <div class=""><i class=""></i></div>
+          Recently Updated
+        </h2>
+        <a href="pages/browse.html?sort=updated" class="view-all-link">View All <i class="fas fa-arrow-right"></i></a>
+      </div>
+      <div class="series-grid" id="updatedGrid">
+        <!-- Loading skeletons -->
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+      </div>
+      <div style="display:flex;justify-content:center;margin-top:var(--space-lg);">
+        <button id="updatedLoadMore" class="btn btn-ghost" style="display:none;">
+          <i class="fas fa-plus"></i> Load More
+        </button>
+      </div>
+    </section>
+
+
+    <!-- New Releases Section -->
+    <section class="container" style="margin-bottom: var(--space-3xl);">
+      <div class="section-header">
+        <h2 class="section-title">
+          <div class=""><i class=""></i></div>
+          New Releases
+        </h2>
+        <a href="pages/browse.html?sort=newest" class="view-all-link">View All <i class="fas fa-arrow-right"></i></a>
+      </div>
+      <div class="series-carousel" id="newReleasesGrid">
+        <!-- Loading skeletons -->
+        
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+      
+      </div>
+    </section>
+    
+        <!-- Popular This Week Section -->
+    <section class="container" style="margin-bottom: var(--space-3xl);">
+      <div class="section-header">
+        <h2 class="section-title">
+          <div class=""><i class=""></i></div>
+          Popular This Week
+        </h2>
+        <a href="pages/browse.html?sort=popular" class="view-all-link">View All <i class="fas fa-arrow-right"></i></a>
+      </div>
+      <div class="series-carousel" id="popularGrid">
+        <!-- Loading skeletons -->
+        
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+      
+      </div>
+    </section>
+
+
+    <!-- Latest Chapters Section -->
+    <section class="container" style="margin-bottom: var(--space-3xl);">
+      <div class="section-header">
+        <h2 class="section-title">
+          <div class=""><i class=""></i></div>
+          Latest Chapters
+        </h2>
+        <a href="pages/browse.html?sort=chapters" class="view-all-link">View All <i class="fas fa-arrow-right"></i></a>
+      </div>
+      <div id="latestChaptersList">
+        <!-- Loading skeletons -->
+        
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+      
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-grid" style="grid-template-columns: 1fr; margin-bottom: var(--space-lg);">
+        <div style="text-align: center;">
+          <a href="./index.html" class="logo" style="justify-content: center; margin-bottom: var(--space-sm);">
+            <div class="" alt="logo" class="logo-img"></div><img src="images/Y.png" alt="YoruVerse" class="logo-text-img">
+          </a>
+          <p class="footer-brand-desc" style="max-width: 640px; margin: 0 auto;">
+            &copy; 2026 YoruVerse does not store any files on its servers.
+            It only links to media hosted on third-party services. All content
+            and trademarks are the property of their respective owners.
+          </p>
+        </div>
+      </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Scripts -->
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+      window.addEventListener('load', () => {
+        // Relative path so it works at any base path (subfolder hosting, etc.)
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('[PWA] Service Worker registered, scope:', reg.scope))
+          .catch(err => console.warn('[PWA] Service Worker registration failed:', err && err.message));
+      });
+    } else {
+      console.log('[PWA] Service Worker skipped (insecure context or unsupported).');
+    }
+  </script>
+
+  <script src="./js/path-utils.js"></script>
+  <script src="./js/firebase-config.js"></script>
+  <script src="./js/ui.js"></script>
+  <script src="./js/auth.js"></script>
+  <script src="./js/db.js"></script>
+  <script src="./js/donation.js"></script>
+  <!-- Source plugin layer + sync (needed so Auto-Sync re-arms from any page) -->
+  <script src="./js/source-config.js"></script>
+ <script src="./js/source-registry.js"></script>
+ <script src="./sources/source-validation.js"></script>
+ <script src="./sources/source-template.js"></script>
+  <script src="./sources/source-vortexscans.js"></script>
+  <script src="./sources/source-hivetoons.js"></script>
+  <script src="./sources/source-roliascan.js"></script>
+  <script src="./sources/source-madarascans.js"></script>
+  <script src="./sources/source-utoon.js"></script>
+  <script src="./sources/source-violetscans.js"></script>
+  <script src="./sources/source-kingofshojo.js"></script>
+  <script src="./sources/source-templetoons.js"></script>
+  <script src="./sources/source-qimanga.js"></script>
+  <script src="./sources/source-mangakatana.js"></script>
+  <script src="./sources/source-genztoons.js"></script>
+  <script src="./sources/source-flamecomics.js"></script>
+  <script src="./sources/source-asurascans-series.js"></script>
+  <script src="./sources/source-vortexscans-series.js"></script>
+  <script src="./sources/source-hivetoons-series.js"></script>
+  <script src="./sources/source-roliascan-series.js"></script>
+  <script src="./sources/source-madarascans-series.js"></script>
+  <script src="./sources/source-utoon-series.js"></script>
+  <script src="./sources/source-genztoons-series.js"></script>
+  <script src="./sources/source-flamecomics-series.js"></script>
+  <script src="./js/series-importer.js"></script>
+  <script src="./js/series-sync.js"></script>
+  
+  <script>
+    // ==================== HOMEPAGE LOGIC ====================
+    
+    let currentSlide = 0;
+    let heroSlides = [];
+    let autoSlideInterval;
+
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', async () => {
+      UI.init();
+
+      // Hide loading screen after Firebase initializes
+      setTimeout(() => {
+        document.getElementById('loadingScreen').classList.add('hidden');
+      }, 1000);
+
+      // Load all sections
+      loadHeroSlider();
+      loadTrending();
+      loadReadingHistory();
+      loadRecentlyUpdated();
+      loadPopular();
+      loadNewReleases();
+      loadLatestChapters();
+      loadGenres();
+
+      // Re-load reading history whenever auth state changes
+      try {
+        firebase.auth().onAuthStateChanged(() => loadReadingHistory());
+      } catch (_) {}
+    });
+
+    // Hero Slider (poster carousel)
+    function escapeHtml(str) {
+      return String(str || '').replace(/[&<>"']/g, c => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+      }[c]));
+    }
+
+    // Cached refs + state for the hero slider (avoid re-querying the DOM each transition)
+    let heroPosterEls = [];
+    let heroDotEls = [];
+    let heroBgEls = [null, null];
+    let heroBgActiveLayer = 0;
+    let heroBgPreloaded = new Set();
+    let heroPendingFrame = 0;
+
+    function preloadHeroImage(url) {
+      if (!url || heroBgPreloaded.has(url)) return;
+      heroBgPreloaded.add(url);
+      const img = new Image();
+      img.decoding = 'async';
+      img.src = url;
+    }
+
+    async function loadHeroSlider() {
+      try {
+        const series = await DB.getTrendingSeries(7);
+        heroSlides = series;
+        const root = document.getElementById('heroSlider');
+
+        if (!series.length) {
+          root.innerHTML = `
+            <div class="hero-bg-overlay"></div>
+            <div style="position:relative;z-index:2;display:grid;place-items:center;height:100%;padding:2rem;text-align:center;">
+              <div>
+                <span class="hero-rating" style="position:static;margin-bottom:1rem;"><i class="fas fa-star"></i> Welcome</span>
+                <h2 style="font-size:clamp(1.5rem,4vw,2.25rem);font-weight:800;margin:0 0 .5rem;">Welcome to YoruVerse</h2>
+                <p style="color:var(--text-secondary);margin:0 0 1.25rem;">Discover and read thousands of manhwa series.</p>
+                <a href="pages/browse.html" class="btn btn-primary btn-lg"><i class="fas fa-search"></i> Browse Series</a>
+              </div>
+            </div>`;
+          return;
+        }
+
+        const postersHtml = series.map((s, i) => {
+          const rating = (typeof s.rating === 'number' && s.rating > 0)
+            ? s.rating.toFixed(1)
+            : (s.averageRating ? Number(s.averageRating).toFixed(1) : 'N/A');
+          const cover = s.coverImage || './images/placeholder.png';
+          // Eager-load the first 3 covers (active + immediate neighbors); the rest stay lazy.
+          const eager = i < 3;
+          return `
+            <a class="hero-poster" data-slide="${i}" href="pages/series.html?id=${encodeURIComponent(s.id)}">
+              <img src="${escapeHtml(cover)}" alt="${escapeHtml(s.title || '')}" loading="${eager ? 'eager' : 'lazy'}" decoding="async" fetchpriority="${i === 0 ? 'high' : 'auto'}" draggable="false" />
+              <span class="hero-rating"><i class="fas fa-star"></i> ${escapeHtml(rating)}</span>
+              <div class="hero-poster-title">${escapeHtml(s.title || 'Untitled')}</div>
+            </a>`;
+        }).join('');
+
+        const dotsHtml = series.map((_, i) =>
+          `<div class="hero-dot ${i === 0 ? 'active' : ''}" data-dot="${i}"></div>`
+        ).join('');
+
+        // Two background layers crossfade between covers (background-image isn't tweenable).
+        root.innerHTML = `
+          <div class="hero-bg is-ready" data-layer="0"></div>
+          <div class="hero-bg" data-layer="1"></div>
+          <div class="hero-bg-overlay"></div>
+          <div class="hero-track" id="heroTrack">${postersHtml}</div>
+          <div class="hero-slider-dots">${dotsHtml}</div>
+        `;
+
+        // Cache element refs once
+        heroPosterEls = Array.from(root.querySelectorAll('.hero-poster'));
+        heroDotEls = Array.from(root.querySelectorAll('.hero-dot'));
+        heroBgEls = [
+          root.querySelector('.hero-bg[data-layer="0"]'),
+          root.querySelector('.hero-bg[data-layer="1"]'),
+        ];
+        heroBgActiveLayer = 0;
+        heroBgPreloaded = new Set();
+
+        // Preload every cover up-front so transitions never wait on the network.
+        series.forEach(s => preloadHeroImage(s.coverImage || './images/placeholder.png'));
+
+        // Delegated click handler — one listener instead of N
+        const track = root.querySelector('.hero-track');
+        track.addEventListener('click', (e) => {
+          const poster = e.target.closest('.hero-poster');
+          if (!poster) return;
+          const idx = parseInt(poster.dataset.slide, 10);
+          if (idx !== currentSlide) {
+            e.preventDefault();
+            goToSlide(idx);
+          }
+        });
+        root.querySelector('.hero-slider-dots').addEventListener('click', (e) => {
+          const dot = e.target.closest('.hero-dot');
+          if (!dot) return;
+          goToSlide(parseInt(dot.dataset.dot, 10));
+        });
+
+        // Touch swipe (passive listeners — never block scroll)
+        let touchStartX = 0, touchDX = 0;
+        track.addEventListener('touchstart', (e) => {
+          touchStartX = e.touches[0].clientX; touchDX = 0;
+          clearInterval(autoSlideInterval);
+        }, { passive: true });
+        track.addEventListener('touchmove', (e) => {
+          touchDX = e.touches[0].clientX - touchStartX;
+        }, { passive: true });
+        track.addEventListener('touchend', () => {
+          if (Math.abs(touchDX) > 40) {
+            goToSlide((currentSlide + (touchDX < 0 ? 1 : -1) + heroSlides.length) % heroSlides.length);
+          } else {
+            startAutoSlide();
+          }
+        }, { passive: true });
+
+        // Pause auto-slide on hover (desktop) and when tab is hidden
+        root.addEventListener('mouseenter', () => clearInterval(autoSlideInterval));
+        root.addEventListener('mouseleave', () => startAutoSlide());
+        document.addEventListener('visibilitychange', () => {
+          if (document.hidden) clearInterval(autoSlideInterval);
+          else startAutoSlide();
+        });
+
+        applySlideState(0);
+        startAutoSlide();
+      } catch (error) {
+        console.error('Error loading hero slider:', error);
+      }
+    }
+
+    function startAutoSlide() {
+      clearInterval(autoSlideInterval);
+      if (heroSlides.length <= 1 || document.hidden) return;
+      autoSlideInterval = setInterval(() => {
+        goToSlide((currentSlide + 1) % heroSlides.length);
+      }, 6000);
+    }
+
+    function applySlideState(index) {
+      const n = heroSlides.length;
+      if (!n || !heroPosterEls.length) return;
+
+      // Coalesce rapid calls into a single rAF — no thrashing on fast clicks
+      if (heroPendingFrame) cancelAnimationFrame(heroPendingFrame);
+      heroPendingFrame = requestAnimationFrame(() => {
+        heroPendingFrame = 0;
+        for (let i = 0; i < heroPosterEls.length; i++) {
+          const el = heroPosterEls[i];
+          const diff = ((i - index) % n + n) % n;
+          let cls;
+          if (diff === 0) cls = 'is-active';
+          else if (diff === 1) cls = 'is-next';
+          else if (diff === n - 1) cls = 'is-prev';
+          else if (diff < n / 2) cls = 'is-far-next';
+          else cls = 'is-far-prev';
+          // Only touch className if it actually changed
+          if (el.dataset.state !== cls) {
+            el.classList.remove('is-active', 'is-prev', 'is-next', 'is-far-prev', 'is-far-next');
+            el.classList.add(cls);
+            el.dataset.state = cls;
+          }
+        }
+        for (let i = 0; i < heroDotEls.length; i++) {
+          heroDotEls[i].classList.toggle('active', i === index);
+        }
+
+        // Crossfade the blurred background between two layers
+        const active = heroSlides[index];
+        if (active && heroBgEls[0]) {
+          const url = active.coverImage || './images/placeholder.png';
+          const nextLayer = heroBgActiveLayer ^ 1;
+          const nextEl = heroBgEls[nextLayer];
+          const prevEl = heroBgEls[heroBgActiveLayer];
+          if (nextEl.dataset.url !== url) {
+            nextEl.style.backgroundImage = `url("${url}")`;
+            nextEl.dataset.url = url;
+          }
+          nextEl.classList.add('is-ready');
+          prevEl.classList.remove('is-ready');
+          heroBgActiveLayer = nextLayer;
+        }
+
+        // Warm up neighbors' covers so the next transition has them decoded
+        const nextIdx = (index + 1) % n;
+        const prevIdx = (index - 1 + n) % n;
+        preloadHeroImage(heroSlides[nextIdx]?.coverImage);
+        preloadHeroImage(heroSlides[prevIdx]?.coverImage);
+
+        currentSlide = index;
+      });
+    }
+
+    function goToSlide(index) {
+      if (!heroSlides.length) return;
+      clearInterval(autoSlideInterval);
+      applySlideState(index);
+      startAutoSlide();
+    }
+
+
+    // Trending
+    async function loadTrending() {
+      try {
+        const series = await DB.getTrendingSeries(12);
+        renderSeriesGrid('trendingGrid', series);
+      } catch (error) {
+        console.error('Error loading trending:', error);
+      }
+    }
+
+    // Recently Updated — paginated with Load More
+    const RECENT_PAGE_SIZE = 12;
+    let recentCursor = null;
+    let recentLoading = false;
+    async function loadRecentlyUpdated(append = false) {
+      if (recentLoading) return;
+      recentLoading = true;
+      const btn = document.getElementById('updatedLoadMore');
+      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading…'; }
+      try {
+        const { series, lastCursor, hasMore } = await DB.getRecentlyUpdated({
+          limit: RECENT_PAGE_SIZE,
+          cursor: append ? recentCursor : null
+        });
+        recentCursor = lastCursor;
+        const container = document.getElementById('updatedGrid');
+        if (!append) container.innerHTML = '';
+        if (!append && (!series || series.length === 0)) {
+          container.innerHTML = UI.renderEmptyState('No series found', 'Check back later for updates.');
+        } else {
+          container.insertAdjacentHTML('beforeend', series.map(s => UI.renderSeriesCard(s)).join(''));
+          UI.initLazyLoading();
+        }
+        if (btn) {
+          btn.style.display = hasMore ? '' : 'none';
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-plus"></i> Load More';
+        }
+      } catch (error) {
+        console.error('Error loading recently updated:', error);
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-plus"></i> Load More'; }
+      } finally {
+        recentLoading = false;
+      }
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('updatedLoadMore');
+      if (btn) btn.addEventListener('click', () => loadRecentlyUpdated(true));
+    });
+
+    // Reading History — per-user, sorted most-recently-read first
+    async function loadReadingHistory() {
+      const section = document.getElementById('readingHistorySection');
+      const grid    = document.getElementById('readingHistoryGrid');
+      if (!section || !grid) return;
+      const user = firebase.auth().currentUser;
+      if (!user) { section.style.display = 'none'; return; }
+      section.style.display = '';
+      grid.innerHTML = '<div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div></div>'.repeat(4);
+      try {
+        const items = await DB.getContinueReading();
+        if (!items || items.length === 0) {
+          grid.innerHTML = UI.renderEmptyState('No Reading History Yet', 'Start reading a series and it will show up here.', 'fa-bookmark');
+          return;
+        }
+        grid.innerHTML = items.map(h => {
+          const s = h.series;
+          const placeholder = (window.AppPath ? AppPath.to('images/placeholder.jpg') : './images/placeholder.jpg');
+          const cover = s.coverImage || s.cover || placeholder;
+          const seriesHref  = `pages/series.html?id=${s.id}`;
+          const chapterHref = h.chapterId
+            ? `pages/chapter.html?series=${s.id}&chapter=${h.chapterId}`
+            : seriesHref;
+          const titleSafe = String(s.title || 'Untitled').replace(/"/g,'&quot;');
+          const continueLabel = h.hasNextChapter ? 'Continue Reading' : 'Re-read Latest';
+          return `
+            <div class="series-card" data-series-id="${s.id}">
+              <a href="${seriesHref}" class="series-card-image" aria-label="${titleSafe}">
+                <img data-src="${cover}" alt="${titleSafe}" loading="lazy">
+              </a>
+              <div class="series-card-info">
+                <div class="series-card-row">
+                  <a href="${chapterHref}" class="series-card-chip">Ch. ${h.chapterNumber}</a>
+                  <span class="series-card-time">${UI.timeAgo(h.readAt) || 'just now'}</span>
+                </div>
+                <a href="${seriesHref}" class="series-card-title-link">
+                  <h3 class="series-card-title">${titleSafe}</h3>
+                </a>
+                <a href="${chapterHref}" class="btn btn-primary btn-sm" style="margin-top:8px;display:inline-flex;gap:6px;align-items:center;">
+                  <i class="fas fa-book-open"></i> ${continueLabel}
+                </a>
+              </div>
+            </div>
+          `;
+        }).join('');
+        UI.initLazyLoading();
+      } catch (e) {
+        console.error('Error loading reading history:', e);
+        grid.innerHTML = UI.renderEmptyState('Could not load history', 'Please try again later.', 'fa-bookmark');
+      }
+    }
+
+    // Popular
+    async function loadPopular() {
+      try {
+        // Use trending as proxy for popular
+        const series = await DB.getTrendingSeries(10);
+        renderSeriesGrid('popularGrid', series);
+      } catch (error) {
+        console.error('Error loading popular:', error);
+      }
+    }
+
+    // New Releases
+    async function loadNewReleases() {
+      try {
+        const series = await DB.getNewReleases(10);
+        renderSeriesGrid('newReleasesGrid', series);
+      } catch (error) {
+        console.error('Error loading new releases:', error);
+      }
+    }
+
+    // Latest Chapters
+    async function loadLatestChapters() {
+      try {
+        const chapters = await DB.getLatestChapters(10);
+        const container = document.getElementById('latestChaptersList');
+        
+        if (chapters.length === 0) {
+          container.innerHTML = UI.renderEmptyState('No chapters yet', 'New chapters will appear here.');
+          return;
+        }
+
+        container.innerHTML = chapters.map(c => {
+          const series = c.series;
+          if (!series) return '';
+          
+          return `
+            <a href="pages/chapter.html?series=${c.seriesId}&chapter=${c.id}" class="chapter-row">
+              <div class="chapter-row-left">
+                <img src="${series.coverImage || './images/placeholder.jpg'}" 
+                     alt="${series.title}" 
+                     loading="lazy" decoding="async"
+                     style="width:48px;height:64px;object-fit:cover;border-radius:8px;flex-shrink:0;">
+
+                <div class="chapter-row-info">
+                  <h4>${series.title}</h4>
+                  <span>Chapter ${c.chapterNumber}${c.chapterTitle ? ': ' + c.chapterTitle : ''}</span>
+                </div>
+              </div>
+              <div class="chapter-row-right">
+                <span class="chapter-row-date">${c.createdAt?.toDate?.() ? c.createdAt.toDate().toLocaleDateString() : 'Recently'}</span>
+              </div>
+            </a>
+          `;
+        }).join('');
+
+      } catch (error) {
+        console.error('Error loading latest chapters:', error);
+      }
+    }
+
+    // Genres
+    async function loadGenres() {
+      try {
+        const genres = await DB.getGenres();
+        const container = document.getElementById('genreTags');
+        
+        container.innerHTML = genres.map(g => `
+        `).join('');
+      } catch (error) {
+        console.error('Error loading genres:', error);
+      }
+    }
+
+    // Helper: Render series grid
+    function renderSeriesGrid(elementId, series) {
+      const container = document.getElementById(elementId);
+      if (!container) return;
+
+      if (!series || series.length === 0) {
+        container.innerHTML = UI.renderEmptyState('No series found', 'Check back later for updates.');
+        return;
+      }
+
+      container.innerHTML = series.map(s => UI.renderSeriesCard(s)).join('');
+      
+      // Re-init lazy loading for new images
+      UI.initLazyLoading();
+    }
+
+    // Mobile search toggle
+    document.getElementById('searchToggle')?.addEventListener('click', () => {
+      const mobileSearch = document.getElementById('mobileSearchBar');
+      if (mobileSearch) {
+        mobileSearch.style.display = mobileSearch.style.display === 'none' ? 'block' : 'none';
+      }
+    });
+  </script>
+  <script src="./js/shared-header.js"></script>
+</body>
+</html>

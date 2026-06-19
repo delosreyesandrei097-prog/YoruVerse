@@ -1,0 +1,339 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Get the user's role with a single get() call to avoid redundant reads
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && getUserRole() == 'admin';
+    }
+    
+    function isModerator() {
+      return isAuthenticated() && 
+        (getUserRole() == 'admin' || getUserRole() == 'moderator');
+    }
+    
+    function hasRole(role) {
+      return isAuthenticated() && getUserRole() == role;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId);
+
+      // ============== ACCOUNT-DATA PROTECTION ==============
+      // Owners may freely edit their own profile EXCEPT a hard-locked set of
+      // staff- / system-managed fields. This prevents a buggy client write,
+      // a stale Auto-Sync payload, or a malicious payload from accidentally:
+      //   - removing/changing an admin or moderator role
+      //   - clearing permissions, badges, warnings, ban state
+      //   - resetting XP / level / titles / unlocked content
+      //   - rewriting the immutable identity fields (uid, email, createdAt)
+      // The list is intentionally broad. If you need to update one of these
+      // fields, go through an admin tool (admins bypass this rule below).
+      // Moderators keep their narrow title-management scope.
+      // Admins can change anything (including role/ban) for any user.
+      allow update: if (
+        isOwner(userId) &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'role',
+          'permissions',
+          'banned',
+          'badges',
+          'customTitles',
+          'unlockedTitleIds',
+          'warnings',
+          'warningCount',
+          'uid',
+          'email',
+          'createdAt'
+        ])
+      ) || isAdmin() || (
+        isModerator() &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['customTitles', 'unlockedTitleIds', 'selectedTitleId'])
+      );
+
+      // Account deletion: only the owner OR an admin can wipe a user doc.
+      // Moderators are explicitly NOT allowed to delete accounts.
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+    
+    // Series collection - Public read, Admin/Moderator write
+    match /series/{seriesId} {
+      allow read: if true;
+      allow create: if isAdmin() || isModerator();
+      // Admins / moderators can update any field. Any authenticated user
+      // may also update a whitelist of safe aggregate fields:
+      //   - rating/ratingCount (client-side rateSeries transaction)
+      //   - followCount (toggleFollow on every Manhwa page)
+      //   - sync metadata written by Auto-Sync (lastSyncTime,
+      //     lastChapter*, chapterCount, totalChapters, latestChapter*),
+      //     so Auto-Sync can run from any signed-in tab — Admin,
+      //     Moderator, or regular User — without permission errors.
+      // NOTE: this whitelist MUST include every field that `DB.addChapter`
+      // and `_finalizeSeries` (in series-importer.js) write to the series
+      // doc when Auto-Sync runs from a regular user's tab — otherwise the
+      // whole update is rejected by Firestore and `updatedAt` never
+      // advances, which is why the Manhwa fails to move to the top of
+      // "Recently Updated" after a User-triggered Auto-Sync.
+      // IMPORTANT: evaluate the cheap, self-contained safe-field whitelist
+      // FIRST. This branch needs NO get() lookups, so a regular User rating a
+      // series (rating/ratingCount/ratingSum/userRatings) is allowed without
+      // ever calling getUserRole(). Putting isAdmin()/isModerator() first meant
+      // every rating attempt ran a get() on the user doc, and if that lookup
+      // errored or the role wasn't 'admin'/'moderator' the whole rule could be
+      // denied — producing "Missing or insufficient permissions" for normal
+      // users. Short-circuiting on the whitelist fixes that and saves a read.
+      allow update: if (
+        isAuthenticated() &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly([
+            'rating', 'ratingCount', 'ratingSum', 'userRatings', 'updatedAt',
+            'followCount', 'viewCount',
+            'lastSyncTime', 'lastSyncedAt', 'lastChapter',
+            'lastChapterNumber', 'lastChapterAt', 'lastChapterId',
+            'lastChapterUpdate', 'lastImportedChapter',
+            'latestChapter', 'latestChapterNumber', 'latestChapterId',
+            'latestChapterTitle', 'latestChapterAt',
+            'chapterCount', 'totalChapters', 'lastUpdated',
+            'source', 'sourceUrl',
+            'reviewCount', 'reviewAverage'
+          ])
+      ) || isAdmin() || isModerator();
+      allow delete: if isAdmin();
+    }
+    
+    // Chapters collection - Public read; Auto-Sync writes from any
+    // authenticated tab, so create/update are allowed for any signed-in
+    // user. Deletes stay staff-only.
+    match /chapters/{chapterId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      // Hard delete restricted to admins (request 3: "Restrict delete
+      // permissions to authorized Admins only"). Moderators should
+      // route chapter removals through admin-only tools that first
+      // archive to `trash` via DB.deleteChapter().
+      allow delete: if isAdmin();
+    }
+    
+    // Comments collection - Public read, Authenticated write with ownership checks.
+    // Any authenticated user may toggle reactions on ANY comment (they can only
+    // modify the `reactions` + `userReactions` fields, never edit content), so
+    // we have a separate update rule that whitelists those fields. Owners +
+    // moderators keep full update rights for content edits.
+    match /comments/{commentId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        // Evaluate the cheap, self-contained reaction-only check FIRST so a
+        // simple like/heart never needs the get(/users/uid) lookup that
+        // isModerator() performs. If that lookup errored (or the user doc
+        // didn't exist yet) the whole rule failed with "Missing or
+        // insufficient permissions" even for legitimate reactions.
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['reactions', 'userReactions', 'likes', 'likedBy']) ||
+        resource.data.userId == request.auth.uid ||
+        isModerator()
+      );
+      // Users can only delete their own comments; moderators can delete any
+      allow delete: if isAuthenticated() &&
+        (resource.data.userId == request.auth.uid || isModerator());
+    }
+    
+    // Notifications collection
+    match /notifications/{notificationId} {
+      // Users can only read notifications addressed to them or 'all'
+      allow read: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid || resource.data.userId == 'all');
+      // Admins/moderators can create any notification (e.g. new chapter alerts).
+      // Authenticated users may also create:
+      //   - 'report' notifications addressed to staff;
+      //   - 'comment_reply' notifications to the parent author (never to self);
+      //   - 'new_chapter' notifications when Auto-Sync runs from any tab,
+      //     so regular users importing new chapters also notify followers.
+      allow create: if isAdmin() || isModerator() ||
+        (isAuthenticated() && (
+          request.resource.data.type == 'report' ||
+          request.resource.data.type == 'new_chapter' ||
+          (request.resource.data.type == 'comment_reply' &&
+           request.resource.data.userId != request.auth.uid)
+        ));
+      // Users can mark their own notifications as read.
+      // Admins/moderators may also edit notifications (e.g. fix an
+      // announcement's title/content after publishing) — this updates the
+      // existing shared 'all' announcement instead of creating a duplicate.
+      allow update: if isAdmin() || isModerator() ||
+        (isAuthenticated() && resource.data.userId == request.auth.uid);
+      // Only admins can delete notifications
+      allow delete: if isAdmin();
+    }
+    
+    // Reports collection - Moderator/Admin only
+    match /reports/{reportId} {
+      allow read: if isModerator();
+      allow create: if isAuthenticated();
+      allow update: if isModerator();
+      allow delete: if isAdmin();
+    }
+
+    // Ratings collection - one document per (series,user) pair
+    // (document id = "{seriesId}_{userId}"). Anyone can read aggregated
+    // ratings; only the owning user may write their own rating doc.
+    match /ratings/{ratingId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+    }
+
+    // Genres collection - Public read; authenticated writers may create
+    // new genre docs so newly used tags (e.g. "Shounen" added to a series)
+    // automatically appear in the Browse filter list. Updates/deletes
+    // remain admin-only to protect the curated taxonomy.
+    match /genres/{genreId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
+    // Per-user view markers — one document per (user, series) pair.
+    // Used by DB.incrementViewCount to guarantee a user only contributes
+    // ONE view per Manhwa. The doc id is `${uid}_${seriesId}`.
+    match /seriesViews/{viewId} {
+      allow read: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid &&
+        viewId == request.auth.uid + '_' + request.resource.data.seriesId;
+      allow update, delete: if false;
+    }
+    
+    // Meta collection - Stats counters and configuration
+    // Stats counters (meta/stats) need to be incremented when any user
+    // registers, comments, etc. — so writes are allowed for any
+    // authenticated user. Other meta docs stay admin-only.
+    match /meta/{metaId} {
+      allow read: if true;
+      // Stats counters (meta/stats) stay writable by any signed-in user so
+      // increments work. Maintenance flag is admin-only.
+      allow write: if isAuthenticated() && metaId != 'maintenance';
+      allow write: if isAdmin() && metaId == 'maintenance';
+    }
+
+    // Site-wide configuration documents (e.g. featuredSeriesSection).
+    // Readable by everyone (so visitors see the custom section on series
+    // pages); writable by admins AND moderators via the in-page editor so
+    // both staff roles can manage the Featured Manhwa section.
+    match /config/{configId} {
+      allow read: if true;
+      allow write: if isAdmin() || isModerator();
+    }
+
+
+    
+    // Community Reviews — one document per (series, user, optional parent).
+    // - Public read so guests can browse reviews.
+    // - Authenticated users can create their own reviews / replies.
+    // - Owners can edit/delete their own; moderators can edit/delete any.
+    // - Vote-only edits (helpfulCount / notHelpfulCount / totalVotes) are
+    //   allowed for any authenticated user so the voting system works
+    //   without giving them content-edit rights.
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        isModerator() ||
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['helpfulCount', 'notHelpfulCount', 'totalVotes',
+                    'helpfulBy', 'notHelpfulBy', 'updatedAt'])
+      );
+      allow delete: if isAuthenticated() &&
+        (resource.data.userId == request.auth.uid || isModerator());
+    }
+
+    // Per-user vote on a review. Doc id = "{reviewId}_{userId}" — enforces
+    // one vote per user. Owners manage their own vote doc.
+    match /reviewVotes/{voteId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid &&
+        voteId == request.resource.data.reviewId + '_' + request.auth.uid;
+      allow delete: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+    }
+
+    // User Warnings — staff (admin/moderator) can issue/remove warnings.
+    // The warned user can read their own warnings (e.g. on settings page).
+    match /userWarnings/{warningId} {
+      allow read: if isAuthenticated() && (
+        isModerator() || resource.data.userId == request.auth.uid
+      );
+      allow create: if isModerator() &&
+        request.resource.data.issuedBy == request.auth.uid;
+      allow update: if isModerator() || (
+        isAuthenticated() &&
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['acknowledged', 'acknowledgedAt'])
+      );
+      allow delete: if isModerator();
+    }
+
+    // Notifications: also allow signed-in users to create 'warning'
+    // notifications targeted at any user (staff issues a warning and the
+    // notification is filed via the same call). This is appended to the
+    // existing rule above by way of the notifications rule already
+    // covering type=='report' and 'new_chapter'.
+
+    // ==================== DATA-PROTECTION COLLECTIONS ====================
+    //
+    // `trash` — soft-delete backup. Every destructive call in db.js writes
+    // the original document here BEFORE deleting from the source
+    // collection. Admins can review and restore via DB.restoreFromTrash().
+    // - read/delete: admin only (contains snapshots of every collection)
+    // - create: any authenticated user (so user-initiated deletes — e.g.
+    //   a user deleting their own comment or review — can still file a
+    //   backup). The client always stamps `deletedBy = auth.uid`.
+    // - update: forbidden (trash entries are immutable)
+    match /trash/{trashId} {
+      allow read:   if isAdmin();
+      allow create: if isAuthenticated() &&
+                    request.resource.data.deletedBy == request.auth.uid;
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    // `auditLog` — append-only record of every delete/restore. Used to
+    // diagnose unexpected data loss ("which account deleted this series
+    // and when?"). Entries are immutable.
+    match /auditLog/{logId} {
+      allow read:   if isModerator();
+      allow create: if isAuthenticated() &&
+                    request.resource.data.actorId == request.auth.uid;
+      allow update, delete: if false; // append-only, never mutated
+    }
+
+    // Default deny - catch-all for any unmatched paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
