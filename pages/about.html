@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About - YoruVerse</title>
+  <meta name="description" content="Learn more about YoruVerse - your ultimate manhwa reading platform.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/donation.css">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="icon" type="image/png" href="../images/O.png">
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <div class="loading-screen" id="loadingScreen"><div class="spinner"></div><p>Loading...</p></div>
+
+  <header class="header">
+    <div class="header-content">
+      <a href="../index.html" class="logo"><img src="../images/Y.png" alt="YoruVerse" class="logo-text-img"></a>
+      <div class="search-bar"><i class="fas fa-search search-icon"></i><input type="text" placeholder="Search..." data-search-input></div>
+      <nav class="nav-links">
+        <a href="../index.html" class="nav-link">Home</a>
+        <a href="browse.html" class="nav-link">Browse</a>
+        <a href="about.html" class="nav-link active">About</a>
+      </nav>
+      <div class="header-actions">
+        <button class="icon-btn" data-theme-toggle><i class="fas fa-moon"></i></button>
+        <a href="profile.html" class="avatar-btn" data-auth-required style="display:none;"><img data-user-avatar src="../images/default-avatar.png" alt="Profile"></a>
+        <a href="login.html" class="btn btn-primary btn-sm" data-auth-guest>Login</a>
+        <button class="icon-btn mobile-menu-btn" data-mobile-menu-btn><i class="fas fa-bars"></i></button>
+      </div>
+    </div>
+  </header>
+
+  <div class="mobile-menu" data-mobile-menu>
+    <div class="mobile-menu-panel">
+      <div class="mobile-menu-header">
+        <a href="../index.html" class="logo"><img src="../images/Y.png" alt="YoruVerse" class="logo-text-img"></a>
+        <button class="icon-btn" data-mobile-menu-close><i class="fas fa-times"></i></button>
+      </div>
+      <div class="mobile-menu-links">
+        <a href="../index.html" class="mobile-menu-link"><i class="fas fa-home"></i> Home</a>
+        <a href="browse.html" class="mobile-menu-link"><i class="fas fa-search"></i> Browse</a>
+        <a href="about.html" class="mobile-menu-link active"><i class="fas fa-info-circle"></i> About</a>
+        <a href="library.html" class="mobile-menu-link" data-auth-required style="display:none;"><i class="fas fa-bookmark"></i> Library</a>
+        <a href="history.html" class="mobile-menu-link" data-auth-required style="display:none;"><i class="fas fa-history"></i> History</a>
+        <a href="profile.html" class="mobile-menu-link" data-auth-required style="display:none;"><i class="fas fa-user"></i> Profile</a>
+        <a href="settings.html" class="mobile-menu-link" data-auth-required style="display:none;"><i class="fas fa-cog"></i> Settings</a>
+        <a href="admin.html" class="mobile-menu-link" data-admin-only style="display:none;"><i class="fas fa-shield-alt"></i> Admin Dashboard</a>
+        <a href="#" class="mobile-menu-link" data-auth-required style="display:none;" onclick="Auth.logout(); return false;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        <a href="login.html" class="mobile-menu-link" data-auth-guest><i class="fas fa-sign-in-alt"></i> Login</a>
+      </div>
+    </div>
+  </div>
+
+  <main>
+    <!-- Hero -->
+    <div class="about-hero container">
+      <h1>About <span class="text-gradient">YoruVerse</span></h1>
+      <p>YoruVerse is a community-driven reader and tracker for manhwa, manhua, and webtoons — built so you can discover, follow, and read your favorite series in one place.</p>
+    </div>
+
+    <!-- What is YoruVerse -->
+    <div class="container" style="margin-top: var(--space-2xl);">
+      <div style="background: var(--bg-card); border-radius: var(--radius-lg); padding: var(--space-2xl); border: 1px solid var(--bg-tertiary);">
+        <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: var(--space-md);">What is YoruVerse?</h2>
+        <p style="color: var(--text-secondary); line-height: 1.7; margin-bottom: var(--space-md);">
+          YoruVerse is a free web platform that lets readers browse, search, bookmark,
+          and read manhwa chapters through a single clean interface. Instead of jumping
+          between scanlation sites, you get a unified library, reading progress sync,
+          and update notifications across all of your devices.
+        </p>
+        <p style="color: var(--text-secondary); line-height: 1.7;">
+          Our goal is simple: give readers a fast, ad-light, mobile-friendly reader and
+          give scanlation groups credit by always linking back to the original source.
+        </p>
+      </div>
+    </div>
+    
+
+    <!-- Services -->
+    <div class="container" style="margin-top: var(--space-2xl);">
+      <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: var(--space-lg); text-align: center;">What we provide</h2>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fas fa-ban"></i></div>
+          <h3>No Ads</h3>
+          <p>Enjoy an uninterrupted reading experience with no banner ads, pop-ups, or distractions while browsing and reading your favorite manhwa.</p>
+        </div>
+        
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fas fa-bookmark"></i></div>
+          <h3>Library &amp; Bookmarks</h3>
+          <p>Save series to your personal library, organize what you're reading vs. completed, and pick up exactly where you left off.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fas fa-history"></i></div>
+          <h3>Reading History</h3>
+          <p>Every chapter you open is recorded so you always know what you've read and what's next — synced to your account.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fas fa-heart"></i></div>
+          <h3>Favorites &amp; Ratings</h3>
+          <p>Heart the series you love, rate them, and help other readers discover great titles through the community ranking.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fas fa-comments"></i></div>
+          <h3>Comments &amp; Discussion</h3>
+          <p>Discuss chapters with other readers, share theories, and react — moderated to keep the conversation friendly.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fas fa-bell"></i></div>
+          <h3>Update Notifications</h3>
+          <p>Auto-sync detects new chapters from your sources and notifies you the moment they're released.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fas fa-trophy"></i></div>
+          <h3>EXP &amp; Leaderboards</h3>
+          <p>Earn experience for reading, commenting, and contributing. Climb the community leaderboard.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon"><i class="fas fa-mobile-alt"></i></div>
+          <h3>Installable PWA</h3>
+          <p>Install YoruVerse to your home screen for an app-like experience with offline-ready shell.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Purpose -->
+    <div class="container" style="margin-top: var(--space-3xl);">
+      <div style="background: var(--bg-card); border-radius: var(--radius-lg); padding: var(--space-2xl); border: 1px solid var(--bg-tertiary);">
+        <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: var(--space-md);">Our purpose</h2>
+        <p style="color: var(--text-secondary); line-height: 1.7;">
+          YoruVerse exists to make following manhwa effortless: one library, one
+          reading progress, one notification feed. We always credit the original
+          scanlators and link back to their sites so readers can support them directly.
+        </p>
+      </div>
+    </div>
+
+    <!-- File / Storage clarification -->
+    <div class="container" style="margin-top: var(--space-2xl);">
+      <div style="background: var(--bg-card); border-radius: var(--radius-lg); padding: var(--space-2xl); border: 1px solid var(--bg-tertiary);">
+        <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: var(--space-md);">
+          <i class="fas fa-server" style="color: var(--accent); margin-right: var(--space-sm);"></i>
+          How content is stored
+        </h2>
+        <p style="color: var(--text-secondary); line-height: 1.7; margin-bottom: var(--space-md);">
+          <strong>YoruVerse does not host or store chapter images, videos, or
+          PDFs on its own servers.</strong> All chapter pages are streamed directly
+          from the original scanlation sources.  We only keep the
+          URLs that point to those externally-hosted images.
+        </p>
+        <p style="color: var(--text-secondary); line-height: 1.7; margin-bottom: var(--space-md);">
+          What we <em>do</em> store on ■■■■■■■■ is lightweight metadata that powers
+          the reader experience:
+        </p>
+        </ul>
+        <p style="color: var(--text-secondary); line-height: 1.7;">
+          If a source site goes offline or removes a chapter, the images will stop
+          loading here too — because we never had a copy of them. All copyright for
+          chapter artwork remains with the original creators and the scanlation
+          groups who produced the translations.
+        </p>
+      </div>
+    </div>
+
+<br
+    
+    <!-- Privacy Policy -->
+    <div class="container" id="privacy" style="margin-bottom: var(--space-3xl);">
+      <div style="background: var(--bg-card); border-radius: var(--radius-lg); padding: var(--space-2xl); border: 1px solid var(--bg-tertiary);">
+        <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: var(--space-lg);">
+          <i class="fas fa-shield-alt" style="color: var(--accent); margin-right: var(--space-sm);"></i>
+          Privacy Policy
+        </h2>
+        <div style="color: var(--text-secondary); line-height: 1.7;">
+          <p style="margin-bottom: var(--space-md);"><strong>What we collect</strong></p>
+          <ul style="list-style: disc; padding-left: var(--space-lg); margin-bottom: var(--space-md);">
+            <li>Account info you provide at sign-up: email, display name, and optional avatar.</li>
+            <li>Reading activity tied to your account: library, favorites, history, comments, ratings, EXP.</li>
+            <li>Basic technical data (browser/device type) used only to keep the app running.</li>
+          </ul>
+          <p style="margin-bottom: var(--space-md);"><strong>What we do NOT collect</strong></p>
+          <ul style="list-style: disc; padding-left: var(--space-lg); margin-bottom: var(--space-md);">
+            <li>We do not sell, rent, or share your personal data with advertisers.</li>
+            <li>We do not store chapter images or video on our servers.</li>
+            <li>We do not run third-party tracking pixels or fingerprinting scripts.</li>
+          </ul>
+          <p style="margin-bottom: var(--space-md);"><strong>How your data is protected</strong></p>
+          <ul style="list-style: disc; padding-left: var(--space-lg); margin-bottom: var(--space-md);">
+            <li>Authentication and database are handled by ■■■■■■■■ with security rules.</li>
+            <li>Only you (and administrators acting on your request) can modify your account data.</li>
+            <li>Comments are tied to your account and may be moderated to keep the community safe.</li>
+          </ul>
+          <p style="margin-bottom: var(--space-md);"><strong>Your rights</strong></p>
+          <ul style="list-style: disc; padding-left: var(--space-lg);">
+            <li>You can update your profile and preferences at any time from Settings.</li>
+            <li>You can request deletion of your account and associated data by contacting us.</li>
+            <li>You can opt out of update notifications without losing access to the rest of the app.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Terms -->
+    <div class="container" id="terms" style="margin-bottom: var(--space-3xl);">
+      <div style="background: var(--bg-card); border-radius: var(--radius-lg); padding: var(--space-2xl); border: 1px solid var(--bg-tertiary);">
+        <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: var(--space-lg);">Terms of Service</h2>
+        <div style="color: var(--text-secondary); line-height: 1.7;">
+          <p style="margin-bottom: var(--space-md);">By using YoruVerse, you agree to the following:</p>
+          <ul style="list-style: disc; padding-left: var(--space-lg); margin-bottom: var(--space-md);">
+            <li>YoruVerse is a community reader/tracker; chapter content is provided by external sources.</li>
+            <li>All copyright in chapter artwork belongs to the original creators and scanlation groups.</li>
+            <li>Be respectful in comments — harassment, spam, and illegal content are not allowed.</li>
+            <li>Accounts that abuse the platform may be suspended or terminated.</li>
+            <li>The service is provided "as is" and may change as sources or features evolve.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contact -->
+    <div class="container" id="contact" style="margin-bottom: var(--space-3xl);">
+      <div style="background: var(--bg-card); border-radius: var(--radius-lg); padding: var(--space-2xl); border: 1px solid var(--bg-tertiary); text-align: center;">
+        <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: var(--space-md);">Contact Us</h2>
+        <p style="color: var(--text-secondary); margin-bottom: var(--space-lg);">Have questions, feedback, or a takedown request? We're happy to hear from you.</p>
+        <a href="mailto:contact@yoruverse.com" class="btn btn-primary btn-lg"><i class="fas fa-envelope"></i> contact@yoruverse6.com</a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-grid" style="grid-template-columns: 1fr; margin-bottom: var(--space-lg);">
+        <div style="text-align: center;">
+          <a href="../index.html" class="logo" style="justify-content: center; margin-bottom: var(--space-sm);">
+            <img src="../images/Y.png" alt="YoruVerse" class="logo-text-img">
+          </a>
+          <p class="footer-brand-desc" style="max-width: 640px; margin: 0 auto;">
+            &copy; 2026 YoruVerse does not store any files on its servers.
+            It only links to media hosted on third-party services. All content
+            and trademarks are the property of their respective owners.
+          </p>
+        </div>
+      </div>    
+  </footer>
+ 
+ 
+  <script src="../js/path-utils.js"></script>
+  <script src="../js/firebase-config.js"></script>
+  <script src="../js/ui.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/db.js"></script>
+  <script>UI.init(); document.addEventListener('DOMContentLoaded', () => { setTimeout(() => document.getElementById('loadingScreen').classList.add('hidden'), 500); });</script>
+  <script src="../js/shared-header.js"></script>
+</body>
+</html>

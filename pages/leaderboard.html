@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leaderboard - YoruVerse</title>
+  <meta name="description" content="Top readers on YoruVerse, ranked by experience earned from reading manhwa chapters.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/donation.css">
+  <link rel="stylesheet" href="../css/exp.css">
+  <link rel="icon" type="image/png" href="../images/O.png">
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <header class="header">
+    <div class="header-content">
+      <a href="../index.html" class="logo"><img src="../images/Y.png" alt="YoruVerse" class="logo-text-img"></a>
+      <nav class="nav-links">
+        <a href="../index.html" class="nav-link">Home</a>
+        <a href="browse.html" class="nav-link">Browse</a>
+        <a href="leaderboard.html" class="nav-link active">Leaderboard</a>
+      </nav>
+      <div class="header-actions">
+        <a href="profile.html" class="avatar-btn" data-auth-required style="display:none;"><img data-user-avatar src="../images/default-avatar.png" alt="Profile"></a>
+        <a href="login.html" class="btn btn-primary btn-sm" data-auth-guest>Login</a>
+      </div>
+    </div>
+  </header>
+
+  <main style="padding-top: var(--space-xl);">
+    <div class="container">
+      <h1><i class="fas fa-trophy" style="color:#facc15;"></i> Top Readers</h1>
+      <p style="color:var(--text-muted);">Ranked by total EXP earned from reading chapters.</p>
+      <div id="leaderboard" style="margin-top: var(--space-lg);">
+        <p style="color:var(--text-muted);">Loading...</p>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-content">
+    </div>
+  </footer>
+
+  <script src="../js/path-utils.js"></script>
+  <script src="../js/firebase-config.js"></script>
+  <script src="../js/ui.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/db.js"></script>
+  <script src="../js/exp-system.js"></script>
+  <script>
+    UI.init();
+    document.addEventListener('DOMContentLoaded', async () => {
+      const list = await EXPSystem.getLeaderboard(50);
+      const c = document.getElementById('leaderboard');
+      if (!list.length) { c.innerHTML = '<p style="color:var(--text-muted);">No readers yet.</p>'; return; }
+      c.innerHTML = list.map((u, i) => {
+        const rank = i + 1;
+        const cls = rank <= 3 ? `lb-row__rank--${rank}` : '';
+        return `<a href="user.html?uid=${u.uid}" class="lb-row" style="text-decoration:none;color:inherit;">
+          <div class="lb-row__rank ${cls}">#${rank}</div>
+          <img src="${u.avatar}" class="lb-row__avatar" alt="">
+          <div>
+            <div class="lb-row__name">${u.username} ${EXPSystem.renderLevelBadge(u.level)} ${u.selectedTitleId ? EXPSystem.renderTitleBadge(u.selectedTitleId) : ''}</div>
+            <div class="lb-row__exp">${u.exp.toLocaleString()} XP · ${u.chaptersReadCount} chapters</div>
+          </div>
+          <div><i class="fas fa-chevron-right" style="color:var(--text-muted);"></i></div>
+        </a>`;
+      }).join('');
+    });
+  </script>
+  <script src="../js/shared-header.js"></script>
+</body>
+</html>

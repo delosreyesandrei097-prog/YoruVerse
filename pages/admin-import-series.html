@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Import Series - YoruVerse Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/donation.css">
+  <link rel="stylesheet" href="../css/series-import.css">
+  <link rel="icon" type="image/png" href="../images/O.png">
+
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <div class="loading-screen" id="loadingScreen"><div class="spinner"></div><p>Loading...</p></div>
+
+  <main class="admin-main" style="padding:2rem;max-width:1100px;margin:0 auto;">
+    <a href="admin.html" class="btn btn-ghost" style="margin-bottom:1rem;">
+      <i class="fas fa-arrow-left"></i> Back to Admin
+    </a>
+
+    <h1 style="font-size:1.75rem;font-weight:800;margin-bottom:0.25rem;">Import Series</h1>
+    <p style="color:var(--text-secondary);margin-bottom:2rem;">
+      Bulk-import multiple series at once or paste a single URL for the detailed single-series flow below.
+    </p>
+
+    <!-- ============ BULK IMPORT ============ -->
+    <section class="settings-section" id="bulkImportCard" style="margin-bottom:1.5rem;border:1px solid var(--accent-primary,#6366f1);">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem;">
+        <h3 style="font-size:1.125rem;font-weight:600;margin:0;">
+          <i class="fas fa-layer-group"></i> Bulk Import (Multiple Series)
+        </h3>
+        <button class="btn btn-ghost btn-sm" type="button" onclick="BulkImport.toggleHelp()">
+          <i class="fas fa-question-circle"></i> Help
+        </button>
+      </div>
+      <p class="muted" id="bulkHelp" style="display:none;margin-top:-0.5rem;margin-bottom:0.75rem;">
+        Paste up to as many series URLs as you need (one per row). Click <strong>Preview All</strong>
+        to fetch metadata for every URL in parallel, then review/edit each card and
+        <strong>Publish Selected</strong> to import them one after another.
+      </p>
+
+      <div id="bulkUrlList" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
+
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.75rem;">
+        <button class="btn btn-ghost btn-sm" type="button" onclick="BulkImport.addRow()">
+          <i class="fas fa-plus"></i> Add Another URL
+        </button>
+        <button class="btn btn-ghost btn-sm" type="button" onclick="BulkImport.clearRows()">
+          <i class="fas fa-eraser"></i> Clear
+        </button>
+        <button class="btn btn-primary btn-sm" type="button" onclick="BulkImport.previewAll()">
+          <i class="fas fa-eye"></i> Preview All
+        </button>
+      </div>
+
+      <div id="bulkPreviewWrap" style="margin-top:1.25rem;display:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.75rem;">
+          <p class="muted" id="bulkPreviewSummary" style="margin:0;"></p>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+            <button class="btn btn-ghost btn-sm" type="button" onclick="BulkImport.selectAll(true)">Select All</button>
+            <button class="btn btn-ghost btn-sm" type="button" onclick="BulkImport.selectAll(false)">Select None</button>
+            <button class="btn btn-primary" type="button" onclick="BulkImport.publishSelected()">
+              <i class="fas fa-cloud-upload-alt"></i> Publish Selected
+            </button>
+          </div>
+        </div>
+        <div id="bulkPreviewList" style="display:flex;flex-direction:column;gap:1rem;"></div>
+      </div>
+    </section>
+
+    <!-- Step 1: URL + preview -->
+    <section class="settings-section">
+      <h3 style="font-size:1.125rem;font-weight:600;margin-bottom:1rem;">1. Series URL</h3>
+      <div class="import-input-group">
+        <input type="url" id="seriesUrl" class="import-input"
+               placeholder="https://asurascans.com/series/...  or  https://vortexscans.org/series/...">
+        <button class="btn btn-primary" id="btnPreview" onclick="ImportSeriesPage.preview()">
+          <i class="fas fa-eye"></i> Preview
+        </button>
+      </div>
+      <div id="detectedSource" style="margin-top:0.75rem;font-size:0.875rem;color:var(--text-muted);"></div>
+      <div id="supportedSources" style="margin-top:0.5rem;font-size:0.8125rem;color:var(--text-muted);"></div>
+    </section>
+
+    <!-- Step 2: Editable Preview -->
+    <section id="previewCard" class="settings-section hidden" style="margin-top:1.5rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem;">
+        <h3 style="font-size:1.125rem;font-weight:600;margin:0;">2. Series Preview &amp; Edit</h3>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+          <button class="btn btn-ghost btn-sm" type="button" onclick="ImportSeriesPage.saveDraft()"><i class="fas fa-save"></i> Save Draft</button>
+          <button class="btn btn-ghost btn-sm" type="button" onclick="ImportSeriesPage.loadDraft()"><i class="fas fa-folder-open"></i> Load Draft</button>
+          <button class="btn btn-ghost btn-sm" type="button" onclick="ImportSeriesPage.refetchMeta()" title="Re-fetch from source"><i class="fas fa-sync"></i> Refetch</button>
+        </div>
+      </div>
+
+      <p class="muted" style="margin-top:-0.5rem;margin-bottom:1rem;font-size:0.85rem;">
+        Review and edit everything before publishing. Required fields are marked with *.
+      </p>
+
+      <div class="series-edit-grid">
+        <!-- Cover -->
+        <div>
+          <label class="form-label">Cover Image *</label>
+          <div class="img-edit">
+            <img id="previewCover" alt="" class="img-edit-preview cover">
+            <input type="url" id="editCoverUrl" class="form-input" placeholder="https://... (cover URL)">
+          </div>
+        </div>
+
+        <!-- Banner -->
+        <div>
+          <label class="form-label">Banner Image</label>
+          <div class="img-edit">
+            <img id="previewBanner" alt="" class="img-edit-preview banner">
+            <input type="url" id="editBannerUrl" class="form-input" placeholder="https://... (optional banner URL)">
+          </div>
+        </div>
+
+        <!-- Title -->
+        <div class="span-2">
+          <label class="form-label" for="editTitle">Title *</label>
+          <input type="text" id="editTitle" class="form-input" maxlength="200" required>
+        </div>
+
+        <!-- Alt titles -->
+        <div class="span-2">
+          <label class="form-label" for="editAltTitles">Alternative Titles <span class="muted">(one per line)</span></label>
+          <textarea id="editAltTitles" class="form-input" rows="2"></textarea>
+        </div>
+
+        <!-- Author / Artist -->
+        <div>
+          <label class="form-label" for="editAuthor">Author</label>
+          <input type="text" id="editAuthor" class="form-input">
+        </div>
+        <div>
+          <label class="form-label" for="editArtist">Artist</label>
+          <input type="text" id="editArtist" class="form-input">
+        </div>
+
+        <!-- Status / Year -->
+        <div>
+          <label class="form-label" for="editStatus">Status *</label>
+          <select id="editStatus" class="form-input">
+            <option value="ongoing">Ongoing</option>
+            <option value="completed">Completed</option>
+            <option value="hiatus">Hiatus</option>
+            <option value="dropped">Dropped</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label" for="editYear">Release Year</label>
+          <input type="number" id="editYear" class="form-input" min="1900" max="2100" placeholder="e.g. 2024">
+        </div>
+
+        <!-- Genres -->
+        <div class="span-2">
+          <label class="form-label" for="editGenres">Genres <span class="muted">(comma-separated)</span></label>
+          <input type="text" id="editGenres" class="form-input" placeholder="Action, Fantasy, Drama">
+        </div>
+
+        <!-- Synopsis -->
+        <div class="span-2">
+          <label class="form-label" for="editSynopsis">Synopsis *</label>
+          <textarea id="editSynopsis" class="form-input" rows="6" placeholder="Plain-text synopsis. HTML tags will be stripped."></textarea>
+        </div>
+
+        <!-- Chapters summary -->
+        <div class="span-2">
+          <p id="previewChapters" class="strong" style="margin:0;"></p>
+          <p id="previewSourceMeta" class="muted" style="margin:0.25rem 0 0;font-size:0.85rem;"></p>
+        </div>
+      </div>
+
+      <div class="form-grid-2col" style="margin-top:1.5rem;">
+        <div class="form-group">
+          <label class="form-label">Concurrency (1-8)</label>
+          <input type="number" id="optConcurrency" class="form-input" min="1" max="8" value="2">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Max retries per chapter</label>
+          <input type="number" id="optRetries" class="form-input" min="1" max="10" value="3">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Range start (optional)</label>
+          <input type="number" id="optRangeStart" class="form-input" step="0.1" placeholder="e.g. 1">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Range end (optional)</label>
+          <input type="number" id="optRangeEnd" class="form-input" step="0.1" placeholder="e.g. 50">
+        </div>
+      </div>
+      <label class="checkbox-row" style="margin-top:0.5rem;">
+        <input type="checkbox" id="optOverwrite"> Re-import chapters that already exist (overwrite)
+      </label>
+
+      <div id="previewValidation" class="preview-validation" style="display:none;"></div>
+
+      <div style="display:flex;gap:0.75rem;margin-top:1.25rem;flex-wrap:wrap;">
+        <button class="btn btn-primary btn-lg" id="btnStart" onclick="ImportSeriesPage.start()">
+          <i class="fas fa-cloud-upload-alt"></i> Publish &amp; Import
+        </button>
+        <button class="btn btn-ghost btn-lg" type="button" onclick="ImportSeriesPage.reset()">
+          Cancel
+        </button>
+      </div>
+    </section>
+
+    <!-- Step 3: Live progress -->
+    <section id="progressCard" class="settings-section hidden" style="margin-top:1.5rem;">
+      <h3 style="font-size:1.125rem;font-weight:600;margin-bottom:1rem;">3. Import Progress</h3>
+      <p id="progSeriesName" class="strong"></p>
+      <p id="progPhase" class="muted"></p>
+
+      <div class="progress-bar"><div id="progFill" class="progress-fill"></div></div>
+      <p id="progCount" class="muted" style="margin-top:0.5rem;"></p>
+
+      <div class="stats-row">
+        <div class="stat-pill"><span class="stat-label">Imported</span><span id="stImported">0</span></div>
+        <div class="stat-pill"><span class="stat-label">Skipped</span><span id="stSkipped">0</span></div>
+        <div class="stat-pill"><span class="stat-label">Failed</span><span id="stFailed">0</span></div>
+        <div class="stat-pill"><span class="stat-label">Remaining</span><span id="stRemaining">0</span></div>
+      </div>
+
+      <div style="display:flex;gap:0.75rem;margin-top:1rem;flex-wrap:wrap;">
+        <button class="btn btn-ghost" id="btnPause"  onclick="ImportSeriesPage.pause()"><i class="fas fa-pause"></i> Pause</button>
+        <button class="btn btn-ghost" id="btnResume" onclick="ImportSeriesPage.resume()" style="display:none;"><i class="fas fa-play"></i> Resume</button>
+        <button class="btn btn-ghost" onclick="ImportSeriesPage.cancel()"><i class="fas fa-stop"></i> Cancel</button>
+        <button class="btn btn-ghost" onclick="ImportSeriesPage.downloadLogs()"><i class="fas fa-download"></i> Download Logs</button>
+      </div>
+    </section>
+
+    <!-- Step 4: Logs -->
+    <section id="logsCard" class="settings-section hidden" style="margin-top:1.5rem;">
+      <h3 style="font-size:1.125rem;font-weight:600;margin-bottom:1rem;">Import Logs</h3>
+      <div class="log-filters">
+        <label><input type="checkbox" data-log-filter="success" checked> Success</label>
+        <label><input type="checkbox" data-log-filter="skip"    checked> Skipped</label>
+        <label><input type="checkbox" data-log-filter="warn"    checked> Warn</label>
+        <label><input type="checkbox" data-log-filter="error"   checked> Error</label>
+        <label><input type="checkbox" data-log-filter="info"    checked> Info</label>
+      </div>
+      <div id="logView" class="log-view"></div>
+    </section>
+
+    <!-- Manage / Sync -->
+    <section class="settings-section" style="margin-top:2rem;">
+      <h3 style="font-size:1.125rem;font-weight:600;margin-bottom:1rem;">Sync &amp; Auto-Sync</h3>
+      <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;">
+        <button class="btn btn-ghost" onclick="ImportSeriesPage.syncAll()">
+          <i class="fas fa-sync"></i> Sync All Series Now
+        </button>
+
+        <label class="checkbox-row">
+          <input type="checkbox" id="autoSyncToggle" onchange="ImportSeriesPage.toggleAutoSync(this.checked)">
+          Auto-sync every
+        </label>
+        <input type="number" id="autoSyncInterval" class="form-input"
+               min="5" step="5" value="60" style="width:90px;"
+               onchange="ImportSeriesPage.updateAutoSyncInterval(this.value)">
+        <span class="muted">minutes</span>
+      </div>
+      <p id="autoSyncStatus" class="muted" style="margin-top:0.5rem;"></p>
+      <p id="syncLiveStatus" class="muted" style="margin-top:0.25rem;"></p>
+
+      <div class="stats-row" style="margin-top:1rem;">
+        <div class="stat-pill"><span class="stat-label">Series Checked</span><span id="ssChecked">0</span></div>
+        <div class="stat-pill"><span class="stat-label">New Found</span><span id="ssNew">0</span></div>
+        <div class="stat-pill"><span class="stat-label">Imported</span><span id="ssImp">0</span></div>
+        <div class="stat-pill"><span class="stat-label">Failed</span><span id="ssFail">0</span></div>
+      </div>
+      <p class="muted" style="margin-top:0.5rem;font-size:0.85rem;">
+        Last Sync: <span id="ssLastSuccess">—</span> · Last Failure: <span id="ssLastFailure">—</span>
+      </p>
+
+      <details style="margin-top:1rem;">
+        <summary style="cursor:pointer;font-weight:600;">Sync Logs</summary>
+        <div id="syncLogView" class="log-view" style="margin-top:0.5rem;max-height:240px;overflow:auto;"></div>
+        <button class="btn btn-ghost btn-sm" type="button" style="margin-top:0.5rem;"
+                onclick="SeriesSync.clearSyncLogs(); document.getElementById('syncLogView').innerHTML='';">
+          <i class="fas fa-trash"></i> Clear Logs
+        </button>
+      </details>
+    </section>
+
+    <!-- Imported series list -->
+    <section class="settings-section" style="margin-top:2rem;">
+      <div style="display:flex;flex-wrap:wrap;gap:0.75rem;align-items:center;margin-bottom:1rem;">
+        <h3 style="font-size:1.125rem;font-weight:600;margin:0;flex:1;min-width:160px;">Imported Series</h3>
+        <span id="importedCount" class="muted" style="font-size:0.85rem;"></span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem;">
+        <div style="position:relative;flex:1;min-width:200px;">
+          <i class="fas fa-search" style="position:absolute;left:0.75rem;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:0.85rem;"></i>
+          <input type="search" id="importedSearch" class="form-input"
+                 placeholder="Search imported series by title or source…"
+                 style="padding-left:2.25rem;width:100%;" autocomplete="off">
+        </div>
+        <select id="importedSort" class="form-input" style="max-width:200px;flex:0 0 auto;">
+          <option value="updated">Recently Synced</option>
+          <option value="title">Title (A→Z)</option>
+          <option value="title-desc">Title (Z→A)</option>
+          <option value="chapters">Most Chapters</option>
+          <option value="source">Source Name</option>
+        </select>
+      </div>
+      <div id="importedList" class="imported-list"></div>
+    </section>
+  </main>
+
+  <!-- App scripts (existing) -->
+  <script src="../js/firebase-config.js"></script>
+  <script src="../js/path-utils.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/db.js"></script>
+
+  <!-- Source plugin layer -->
+  <script src="../js/source-config.js"></script>
+  <script src="../js/source-registry.js"></script>
+  <script src="../sources/source-template.js"></script>
+  <script src="../sources/source-vortexscans.js"></script>
+  <script src="../sources/source-hivetoons.js"></script>
+  <script src="../sources/source-roliascan.js"></script>
+  <script src="../sources/source-madarascans.js"></script>
+  <script src="../sources/source-utoon.js"></script>
+  <script src="../sources/source-violetscans.js"></script>
+  <script src="../sources/source-kingofshojo.js"></script>
+  <script src="../sources/source-templetoons.js"></script>
+  <script src="../sources/source-qimanga.js"></script>
+  <script src="../sources/source-mangakatana.js"></script>
+  <script src="../sources/source-genztoons.js"></script>
+  <script src="../sources/source-flamecomics.js"></script>
+  <script src="../sources/source-asurascans-series.js"></script>
+  <script src="../sources/source-madarascans-series.js"></script>
+  <script src="../sources/source-vortexscans-series.js"></script>
+  <script src="../sources/source-hivetoons-series.js"></script>
+  <script src="../sources/source-roliascan-series.js"></script>
+  <script src="../sources/source-utoon-series.js"></script>
+  <script src="../sources/source-genztoons-series.js"></script>
+  <script src="../sources/source-flamecomics-series.js"></script>
+
+  <!-- New series-import system -->
+  <script src="../js/series-importer.js"></script>
+  <script src="../js/series-sync.js"></script>
+  <script src="../js/import-series-page.js"></script>
+  <script src="../js/bulk-import.js"></script>
+  <script src="../js/shared-header.js"></script>
+</body>
+</html>

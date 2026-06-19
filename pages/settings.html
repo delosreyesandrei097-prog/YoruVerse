@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings - YoruVerse</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/donation.css">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="icon" type="image/png" href="../images/O.png">
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <div class="loading-screen" id="loadingScreen"><div class="spinner"></div><p>Loading settings...</p></div>
+
+  <header class="header">
+    <div class="header-content">
+      <a href="../index.html" class="logo"><img src="../images/Y.png" alt="YoruVerse" class="logo-text-img"></a>
+      <div class="search-bar"><i class="fas fa-search search-icon"></i><input type="text" placeholder="Search..." data-search-input></div>
+      <nav class="nav-links">
+        <a href="../index.html" class="nav-link">Home</a>
+        <a href="browse.html" class="nav-link">Browse</a>
+        <a href="library.html" class="nav-link">Library</a>
+      </nav>
+      <div class="header-actions">
+        <button class="icon-btn" data-theme-toggle><i class="fas fa-moon"></i></button>
+        <a href="profile.html" class="avatar-btn" data-auth-required style="display:none;"><img data-user-avatar src="../images/default-avatar.png" alt="Profile"></a>
+        <a href="login.html" class="btn btn-primary btn-sm" data-auth-guest>Login</a>
+        <button class="icon-btn mobile-menu-btn" data-mobile-menu-btn><i class="fas fa-bars"></i></button>
+      </div>
+    </div>
+  </header>
+
+  <div class="mobile-menu" data-mobile-menu>
+    <div class="mobile-menu-panel">
+      <div class="mobile-menu-header">
+        <a href="../index.html" class="logo"><img src="../images/Y.png" alt="YoruVerse" class="logo-text-img"></a>
+        <button class="icon-btn" data-mobile-menu-close><i class="fas fa-times"></i></button>
+      </div>
+      <div class="mobile-menu-links">
+        <a href="../index.html" class="mobile-menu-link"><i class="fas fa-home"></i> Home</a>
+        <a href="browse.html" class="mobile-menu-link"><i class="fas fa-search"></i> Browse</a>
+        <a href="library.html" class="mobile-menu-link" data-auth-required style="display:none;"><i class="fas fa-bookmark"></i> Library</a>
+        <a href="history.html" class="mobile-menu-link" data-auth-required style="display:none;"><i class="fas fa-history"></i> History</a>
+        <a href="settings.html" class="mobile-menu-link active" data-auth-required><i class="fas fa-cog"></i> Settings</a>
+        <a href="profile.html" class="mobile-menu-link" data-auth-required style="display:none;"><i class="fas fa-user"></i> Profile</a>
+        <a href="admin.html" class="mobile-menu-link" data-admin-only style="display:none;"><i class="fas fa-shield-alt"></i> Admin Dashboard</a>
+        <a href="#" class="mobile-menu-link" data-auth-required style="display:none;" onclick="Auth.logout(); return false;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        <a href="login.html" class="mobile-menu-link" data-auth-guest><i class="fas fa-sign-in-alt"></i> Login</a>
+      </div>
+    </div>
+  </div>
+
+  <main style="padding-top: var(--space-xl);">
+    <div class="container" style="max-width: 800px;">
+      <div class="section-header">
+        <h1 class="section-title"><div class="section-title-icon"><i class="fas fa-cog"></i></div>Settings</h1>
+      </div>
+
+      <!-- Profile Settings -->
+      <div class="settings-section">
+        <h2 class="settings-title">Profile</h2>
+        <p class="settings-desc">Update your profile information.</p>
+        <form id="profileForm" onsubmit="return false;">
+          <div class="form-group">
+            <label class="form-label">Username</label>
+            <input type="text" id="settingUsername" class="form-input" placeholder="Your username">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Bio <span style="color:var(--text-muted);font-weight:400;">(<span id="bioCount">0</span>/500)</span></label>
+            <textarea id="settingBio" class="form-input" rows="3" maxlength="500" placeholder="Tell us about yourself..." oninput="document.getElementById('bioCount').textContent = this.value.length"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Avatar URL</label>
+            <input type="url" id="settingAvatar" class="form-input" placeholder="https://example.com/avatar.jpg">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Cover Photo URL <span style="color:var(--text-muted);font-weight:400;">(profile banner)</span></label>
+            <input type="url" id="settingCover" class="form-input" placeholder="https://example.com/banner.jpg">
+            <div id="coverPreview" style="margin-top:8px;height:160px;border-radius:8px;border:1px solid rgba(148,163,184,0.2);background-size:cover;background-position:50% 50%;background-repeat:no-repeat;display:none;background-color:#0c0c0c;"></div>
+            <div id="coverPositionControls" style="margin-top:10px;display:none;">
+              <div style="font-size:.8rem;color:var(--text-muted);margin-bottom:6px;">
+                Adjust position — drag with the buttons below to choose what part of the image is visible in the banner.
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(3,40px);grid-template-rows:repeat(3,40px);gap:6px;justify-content:center;">
+                <span></span>
+                <button type="button" class="btn btn-ghost btn-sm" data-cover-move="up" title="Move image up" aria-label="Move up"><i class="fas fa-arrow-up"></i></button>
+                <span></span>
+                <button type="button" class="btn btn-ghost btn-sm" data-cover-move="left" title="Move image left" aria-label="Move left"><i class="fas fa-arrow-left"></i></button>
+                <button type="button" class="btn btn-ghost btn-sm" data-cover-move="reset" title="Reset to center" aria-label="Reset"><i class="fas fa-crosshairs"></i></button>
+                <button type="button" class="btn btn-ghost btn-sm" data-cover-move="right" title="Move image right" aria-label="Move right"><i class="fas fa-arrow-right"></i></button>
+                <span></span>
+                <button type="button" class="btn btn-ghost btn-sm" data-cover-move="down" title="Move image down" aria-label="Move down"><i class="fas fa-arrow-down"></i></button>
+                <span></span>
+              </div>
+              <div style="text-align:center;font-size:.72rem;color:var(--text-muted);margin-top:6px;">
+                Position: <span id="coverPosLabel">50% / 50%</span>
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-primary" onclick="saveProfile()"><i class="fas fa-save"></i> Save Profile</button>
+        </form>
+      </div>
+
+      <!-- Appearance -->
+      <div class="settings-section">
+        <h2 class="settings-title">Appearance</h2>
+        <p class="settings-desc">Customize your reading experience.</p>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Dark Mode</div>
+            <div class="toggle-sublabel">Use dark theme across the site</div>
+          </div>
+          <div class="toggle-switch active" id="darkModeToggle" onclick="toggleDarkMode()"></div>
+        </div>
+      </div>
+
+      <!-- Notifications -->
+      <div class="settings-section">
+        <h2 class="settings-title">Notifications</h2>
+        <p class="settings-desc">Manage your notification preferences.</p>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Push Notifications</div>
+            <div class="toggle-sublabel">Get notified about new chapters and updates</div>
+          </div>
+          <div class="toggle-switch" id="notifToggle" onclick="toggleNotifications()"></div>
+        </div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">New Chapter Alerts</div>
+            <div class="toggle-sublabel">Notify when followed series get new chapters</div>
+          </div>
+          <div class="toggle-switch active" id="chapterNotifToggle" onclick="toggleChapterNotifs()"></div>
+        </div>
+      </div>
+
+      <!-- Security -->
+      <div class="settings-section">
+        <h2 class="settings-title">Security</h2>
+        <p class="settings-desc">Update your password and security settings.</p>
+        <form id="passwordForm" onsubmit="return false;">
+          <div class="form-group">
+            <label class="form-label">Current Password</label>
+            <input type="password" id="currentPassword" class="form-input" placeholder="Current password">
+          </div>
+          <div class="form-group">
+            <label class="form-label">New Password</label>
+            <input type="password" id="newPassword" class="form-input" placeholder="New password (min 6 characters)">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Confirm New Password</label>
+            <input type="password" id="confirmNewPassword" class="form-input" placeholder="Repeat new password">
+          </div>
+          <button type="button" class="btn btn-primary" onclick="changePassword()"><i class="fas fa-key"></i> Change Password</button>
+        </form>
+      </div>
+
+      <!-- Account -->
+      <div class="settings-section">
+        <h2 class="settings-title" style="color: var(--error);">Danger Zone</h2>
+        <p class="settings-desc">Irreversible account actions.</p>
+        <button class="btn btn-outline" style="color: var(--error); border-color: var(--error);" onclick="deleteAccount()">
+          <i class="fas fa-trash-alt"></i> Delete Account
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-grid" style="grid-template-columns: 1fr; margin-bottom: var(--space-lg);"><div style="text-align: center;"><a href="../index.html" class="logo" style="justify-content: center;"><img src="../images/Y.png" alt="YoruVerse" class="logo-text-img"></a></div></div>
+    </div>
+  </footer>
+
+  <script src="../js/path-utils.js"></script>
+  <script src="../js/firebase-config.js"></script>
+  <script src="../js/ui.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/db.js"></script>
+
+  <script>
+    UI.init();
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (!(await Auth.requireAuth())) return;
+      setTimeout(() => document.getElementById('loadingScreen').classList.add('hidden'), 500);
+      
+      const userData = Auth.getUserData();
+      if (userData) {
+        document.getElementById('settingUsername').value = userData.username || '';
+        document.getElementById('settingBio').value = userData.bio || '';
+        document.getElementById('bioCount').textContent = (userData.bio || '').length;
+        document.getElementById('settingAvatar').value = userData.avatar || '';
+        const coverInput = document.getElementById('settingCover');
+        const coverPrev = document.getElementById('coverPreview');
+        const coverControls = document.getElementById('coverPositionControls');
+        const coverPosLabel = document.getElementById('coverPosLabel');
+        coverInput.value = userData.coverImage || '';
+        // Live-edited X/Y percentages (0..100). Persisted on Save.
+        window.__coverPos = {
+          x: Number.isFinite(userData.coverPositionX) ? userData.coverPositionX : 50,
+          y: Number.isFinite(userData.coverPositionY) ? userData.coverPositionY : 50
+        };
+        const applyCoverPosition = () => {
+          const { x, y } = window.__coverPos;
+          coverPrev.style.backgroundPosition = `${x}% ${y}%`;
+          if (coverPosLabel) coverPosLabel.textContent = `${Math.round(x)}% / ${Math.round(y)}%`;
+        };
+        const renderCover = () => {
+          const v = coverInput.value.trim();
+          if (v) {
+            coverPrev.style.display='block';
+            coverPrev.style.backgroundImage=`url('${v.replace(/'/g,"\\'")}')`;
+            if (coverControls) coverControls.style.display='block';
+            applyCoverPosition();
+          } else {
+            coverPrev.style.display='none';
+            if (coverControls) coverControls.style.display='none';
+          }
+        };
+        renderCover();
+        coverInput.addEventListener('input', renderCover);
+        // Position buttons — clamp to 0..100, step 10%.
+        document.querySelectorAll('[data-cover-move]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const dir = btn.dataset.coverMove;
+            const STEP = 10;
+            const p = window.__coverPos;
+            if (dir === 'up')    p.y = Math.max(0, p.y - STEP);
+            if (dir === 'down')  p.y = Math.min(100, p.y + STEP);
+            if (dir === 'left')  p.x = Math.max(0, p.x - STEP);
+            if (dir === 'right') p.x = Math.min(100, p.x + STEP);
+            if (dir === 'reset') { p.x = 50; p.y = 50; }
+            applyCoverPosition();
+          });
+        });
+        
+        if (userData.notificationsEnabled) {
+          document.getElementById('notifToggle').classList.add('active');
+        }
+      }
+
+      // Check URL params for password change
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('changePassword') === 'true') {
+        showToast('Please change your password for security.', 'warning');
+        document.getElementById('currentPassword').focus();
+      }
+    });
+
+    async function saveProfile() {
+      const pos = window.__coverPos || { x: 50, y: 50 };
+      const data = {
+        username: document.getElementById('settingUsername').value.trim(),
+        bio: document.getElementById('settingBio').value.trim(),
+        avatar: document.getElementById('settingAvatar').value.trim(),
+        coverImage: document.getElementById('settingCover').value.trim(),
+        coverPositionX: pos.x,
+        coverPositionY: pos.y
+      };
+      
+      const result = await Auth.updateProfile(data);
+      if (result.success) {
+        setTimeout(() => window.location.reload(), 500);
+      }
+    }
+
+    function toggleDarkMode() {
+      const current = document.documentElement.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+      document.getElementById('darkModeToggle').classList.toggle('active', next === 'dark');
+    }
+
+    async function toggleNotifications() {
+      const result = await requestNotificationPermission();
+      document.getElementById('notifToggle').classList.toggle('active', result);
+    }
+
+    async function toggleChapterNotifs() {
+      const toggle = document.getElementById('chapterNotifToggle');
+      const enabled = toggle.classList.contains('active');
+      toggle.classList.toggle('active', !enabled);
+      
+      await db.collection('users').doc(auth.currentUser.uid).update({
+        chapterAlertsEnabled: !enabled
+      });
+      showToast(!enabled ? 'Chapter alerts enabled' : 'Chapter alerts disabled', 'success');
+    }
+
+    async function changePassword() {
+      const current = document.getElementById('currentPassword').value;
+      const newPass = document.getElementById('newPassword').value;
+      const confirm = document.getElementById('confirmNewPassword').value;
+
+      if (!current || !newPass || !confirm) {
+        showToast('Please fill in all password fields', 'warning');
+        return;
+      }
+      if (newPass !== confirm) {
+        showToast('New passwords do not match', 'error');
+        return;
+      }
+      if (newPass.length < 6) {
+        showToast('Password must be at least 6 characters', 'error');
+        return;
+      }
+
+      const result = await Auth.changePassword(current, newPass);
+      if (result.success) {
+        document.getElementById('currentPassword').value = '';
+        document.getElementById('newPassword').value = '';
+        document.getElementById('confirmNewPassword').value = '';
+      }
+    }
+
+    async function deleteAccount() {
+      if (!confirm('WARNING: This will permanently delete your account and all data. This cannot be undone. Are you sure?')) return;
+      
+      const confirmText = prompt('Type "DELETE" to confirm account deletion:');
+      if (confirmText !== 'DELETE') {
+        showToast('Account deletion cancelled', 'info');
+        return;
+      }
+
+      try {
+        const user = auth.currentUser;
+        await db.collection('users').doc(user.uid).delete();
+        await user.delete();
+        showToast('Account deleted', 'info');
+        window.location.href = '../index.html';
+      } catch (error) {
+        showToast('Failed to delete account. You may need to re-login first.', 'error');
+      }
+    }
+  </script>
+  <script src="../js/shared-header.js"></script>
+</body>
+</html>

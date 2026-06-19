@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Profile - YoruVerse</title>
+  <meta name="description" content="View a reader's YoruVerse profile, level, titles, and recent activity.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/donation.css">
+  <link rel="stylesheet" href="../css/exp.css">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="icon" type="image/png" href="../images/O.png">
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <div class="loading-screen" id="loadingScreen"><div class="spinner"></div><p>Loading profile...</p></div>
+
+  <header class="header">
+    <div class="header-content">
+      <a href="../index.html" class="logo"><img src="../images/Y.png" alt="YoruVerse" class="logo-text-img"></a>
+      <nav class="nav-links">
+        <a href="../index.html" class="nav-link">Home</a>
+        <a href="browse.html" class="nav-link">Browse</a>
+        <a href="leaderboard.html" class="nav-link">Leaderboard</a>
+      </nav>
+      <div class="header-actions">
+        <a href="profile.html" class="avatar-btn" data-auth-required style="display:none;"><img data-user-avatar src="../images/default-avatar.png" alt="Profile"></a>
+        <a href="login.html" class="btn btn-primary btn-sm" data-auth-guest>Login</a>
+      </div>
+    </div>
+  </header>
+
+  <main style="padding-top: var(--space-xl);">
+    <div class="container">
+      <div class="profile-cover" id="userCover"></div>
+      <div class="profile-header profile-header--with-cover">
+        <div class="profile-avatar">
+          <img src="../images/default-avatar.png" alt="Profile" id="userAvatar">
+        </div>
+        <h1 class="profile-name" id="userName">User <span id="userRoleBadge"></span> <span id="userLevelBadge"></span> <span id="userTitleBadge"></span></h1>
+        <div class="profile-bio" id="userBio"></div>
+
+        <div style="max-width:420px;margin:var(--space-md) auto 0;">
+          <div class="exp-bar"><div class="exp-bar__fill" id="expBarFill" style="width:0%"></div></div>
+          <div class="exp-bar__label"><span id="expBarLevel">Level 1</span><span id="expBarText">0 / 100 XP</span></div>
+          <div style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;">
+            <i class="fas fa-fire" style="color:#f97316;"></i>
+            <span id="streakText">0-day streak</span> ·
+            <span id="chaptersReadText">0 chapters read</span>
+          </div>
+        </div>
+
+        <div class="profile-stats">
+          <div class="profile-stat"><div class="profile-stat-value" id="statFavorites">0</div><div class="profile-stat-label">Favorites</div></div>
+          <div class="profile-stat"><div class="profile-stat-value" id="statFollowing">0</div><div class="profile-stat-label">Following</div></div>
+          <div class="profile-stat"><div class="profile-stat-value" id="statFollowers">0</div><div class="profile-stat-label">Followers</div></div>
+          <div class="profile-stat"><div class="profile-stat-value" id="statRead">0</div><div class="profile-stat-label">Read</div></div>
+        </div>
+
+        <div id="actionBar" style="margin-top: var(--space-lg);"></div>
+      </div>
+
+      <div style="margin-top: var(--space-2xl);">
+        <h2><i class="fas fa-medal"></i> Unlocked Titles</h2>
+        <div id="titlesList" class="titles-grid"></div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs" style="margin-top: var(--space-2xl);">
+        <button class="tab active" data-tab="recent"><i class="fas fa-history"></i> Recent Reading</button>
+        <button class="tab" data-tab="favorites"><i class="fas fa-heart"></i> Favorites</button>
+        <button class="tab" data-tab="comments"><i class="fas fa-comment"></i> Comments</button>
+      </div>
+
+      <div class="tab-content active" data-tab-content="recent">
+        <div id="recentList"></div>
+        <div class="pagination" id="recentPager"></div>
+      </div>
+
+      <div class="tab-content" data-tab-content="favorites">
+        <div style="display:flex;gap:.25rem;background:var(--bg-secondary,#1a1a1a);padding:.25rem;border-radius:8px;width:max-content;margin-bottom:var(--space-md);">
+          <button class="tab active" data-favtab="favorites" style="padding:.4rem .9rem;border:0;background:transparent;border-radius:6px;cursor:pointer;font-size:.85rem;font-weight:600;color:var(--text-secondary);">Favorite Series</button>
+          <button class="tab" data-favtab="following" style="padding:.4rem .9rem;border:0;background:transparent;border-radius:6px;cursor:pointer;font-size:.85rem;font-weight:600;color:var(--text-secondary);">Followed Series</button>
+        </div>
+        <div class="series-grid" id="favList"></div>
+        <div class="pagination" id="favPager"></div>
+      </div>
+
+      <div class="tab-content" data-tab-content="comments">
+        <div style="display:flex;gap:.25rem;background:var(--bg-secondary,#1a1a1a);padding:.25rem;border-radius:8px;width:max-content;margin-bottom:var(--space-md);">
+          <button class="tab active" data-csort="newest" style="padding:.4rem .9rem;border:0;background:transparent;border-radius:6px;cursor:pointer;font-size:.85rem;font-weight:600;color:var(--text-secondary);">Newest</button>
+          <button class="tab" data-csort="popular" style="padding:.4rem .9rem;border:0;background:transparent;border-radius:6px;cursor:pointer;font-size:.85rem;font-weight:600;color:var(--text-secondary);">Most Popular</button>
+        </div>
+        <div id="commentsList"></div>
+        <div class="pagination" id="commentsPager"></div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer"><div class="footer-content"></div></footer>
+
+  <script src="../js/path-utils.js"></script>
+  <script src="../js/firebase-config.js"></script>
+  <script src="../js/ui.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/db.js"></script>
+  <script src="../js/exp-system.js"></script>
+
+  <script>
+    UI.init();
+    const params = new URLSearchParams(location.search);
+    const uid = params.get('uid');
+
+    const PAGE_SIZE = 8;
+    const state = {
+      profile: null,
+      recent: [], recentPage: 1,
+      favSubtab: 'favorites', favSeries: [], followSeries: [], favPage: 1,
+      cAll: [], cSort: 'newest', cPage: 1,
+      seriesCache: {}
+    };
+
+    function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+    function timeAgo(ts){if(!ts) return '';const d=ts.toDate?ts.toDate():new Date(ts);const s=Math.floor((Date.now()-d.getTime())/1000);if(s<60)return s+'s ago';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';if(s<604800)return Math.floor(s/86400)+'d ago';return d.toLocaleDateString();}
+
+    async function loadSeriesByIds(ids){
+      const missing = ids.filter(id => id && !state.seriesCache[id]);
+      for (let i=0;i<missing.length;i+=10){
+        const chunk = missing.slice(i,i+10);
+        const snap = await db.collection('series').where(firebase.firestore.FieldPath.documentId(),'in',chunk).get();
+        snap.docs.forEach(d => state.seriesCache[d.id] = d.data());
+      }
+    }
+
+    function renderPager(el, total, page, onChange){
+      const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+      if (pages <= 1) { el.innerHTML = ''; return; }
+      const btns = [];
+      btns.push(`<button ${page<=1?'disabled':''} data-p="${page-1}">Prev</button>`);
+      const window2 = 2;
+      for (let p=1;p<=pages;p++){
+        if (p===1 || p===pages || (p>=page-window2 && p<=page+window2)){
+          btns.push(`<button class="${p===page?'active':''}" data-p="${p}">${p}</button>`);
+        } else if (p===page-window2-1 || p===page+window2+1){
+          btns.push(`<span style="padding:0 4px;color:var(--text-muted);">…</span>`);
+        }
+      }
+      btns.push(`<button ${page>=pages?'disabled':''} data-p="${page+1}">Next</button>`);
+      el.innerHTML = btns.join('');
+      el.querySelectorAll('button[data-p]').forEach(b => b.onclick = () => onChange(parseInt(b.dataset.p,10)));
+    }
+
+    // ----- Recent Reading -----
+    async function renderRecent(){
+      const list = document.getElementById('recentList');
+      const items = state.recent;
+      if (!items.length) { list.innerHTML = '<p style="color:var(--text-muted);">No recent reading.</p>'; document.getElementById('recentPager').innerHTML=''; return; }
+      const slice = items.slice((state.recentPage-1)*PAGE_SIZE, state.recentPage*PAGE_SIZE);
+      await loadSeriesByIds([...new Set(slice.map(h=>h.seriesId))]);
+      list.innerHTML = slice.map(h => {
+        const s = state.seriesCache[h.seriesId] || {};
+        return `<a href="chapter.html?series=${escapeHtml(h.seriesId)}&chapter=${escapeHtml(h.chapterId)}" class="chapter-row">
+          <div class="chapter-row-left">
+            <img src="${escapeHtml(s.coverImage||'../images/placeholder.png')}" style="width:48px;height:64px;object-fit:cover;border-radius:8px;">
+            <div class="chapter-row-info"><h4>${escapeHtml(s.title||'Unknown')}</h4><span>Chapter ${escapeHtml(h.chapterNumber||'?')}</span></div>
+          </div>
+          <div class="chapter-row-right"><span class="chapter-row-date">${timeAgo(h.readAt)}</span></div>
+        </a>`;
+      }).join('');
+      renderPager(document.getElementById('recentPager'), items.length, state.recentPage, p => { state.recentPage=p; renderRecent(); window.scrollTo({top: list.offsetTop-80, behavior:'smooth'}); });
+    }
+
+    // ----- Favorites / Followed -----
+    async function renderFav(){
+      const list = document.getElementById('favList');
+      const ids = state.favSubtab === 'favorites' ? state.favSeries : state.followSeries;
+      if (!ids.length) { list.innerHTML = `<p style="color:var(--text-muted);grid-column:1/-1;">No ${state.favSubtab==='favorites'?'favorite':'followed'} series yet.</p>`; document.getElementById('favPager').innerHTML=''; return; }
+      const slice = ids.slice((state.favPage-1)*PAGE_SIZE, state.favPage*PAGE_SIZE);
+      await loadSeriesByIds(slice);
+      list.innerHTML = slice.map(id => {
+        const s = state.seriesCache[id] || {};
+        const latest = s.latestChapter || (s.chapters && s.chapters.length ? `Ch. ${s.chapters[s.chapters.length-1].number || s.chapters.length}` : '');
+        return `<a href="series.html?id=${encodeURIComponent(id)}" class="series-card">
+          <div class="series-card-image"><img src="${escapeHtml(s.coverImage||'../images/placeholder.png')}" alt=""></div>
+          <div class="series-card-info">
+            <h3 class="series-card-title">${escapeHtml(s.title||'Unknown')}</h3>
+            ${latest?`<p style="font-size:.78rem;color:var(--text-muted);">${escapeHtml(latest)}</p>`:''}
+          </div>
+        </a>`;
+      }).join('');
+      renderPager(document.getElementById('favPager'), ids.length, state.favPage, p => { state.favPage=p; renderFav(); window.scrollTo({top: list.offsetTop-80, behavior:'smooth'}); });
+    }
+
+    // ----- Comments tab -----
+    async function loadAllComments(){
+      const out = [];
+      // Chapter comments + replies (single collection 'comments' with parentCommentId)
+      try {
+        const cs = await db.collection('comments').where('userId','==',uid).limit(200).get();
+        const chapterIds = [...new Set(cs.docs.map(d=>d.data().chapterId).filter(Boolean))];
+        const chMap = {};
+        for (let i=0;i<chapterIds.length;i+=10){
+          const chunk = chapterIds.slice(i,i+10);
+          const snap = await db.collection('chapters').where(firebase.firestore.FieldPath.documentId(),'in',chunk).get();
+          snap.docs.forEach(d => chMap[d.id] = d.data());
+        }
+        const sids = [...new Set(Object.values(chMap).map(c=>c.seriesId).filter(Boolean))];
+        await loadSeriesByIds(sids);
+        cs.docs.forEach(d => {
+          const c = d.data();
+          const ch = chMap[c.chapterId] || {};
+          const s = state.seriesCache[ch.seriesId] || {};
+          out.push({
+            id: d.id, kind: c.parentCommentId ? 'Reply' : 'Comment',
+            content: c.content || '', createdAt: c.createdAt,
+            score: (c.likes||0) + (c.helpful||0) - (c.dislikes||0),
+            seriesTitle: s.title || 'Unknown', seriesId: ch.seriesId,
+            href: `chapter.html?series=${encodeURIComponent(ch.seriesId||'')}&chapter=${encodeURIComponent(c.chapterId||'')}#comment-${d.id}`
+          });
+        });
+      } catch(e){ console.warn('comments query failed', e); }
+
+      // Reviews + review replies
+      try {
+        const rs = await db.collection('reviews').where('userId','==',uid).limit(200).get();
+        const sids = [...new Set(rs.docs.map(d=>d.data().seriesId).filter(Boolean))];
+        await loadSeriesByIds(sids);
+        rs.docs.forEach(d => {
+          const r = d.data();
+          const s = state.seriesCache[r.seriesId] || {};
+          out.push({
+            id: d.id, kind: r.parentId ? 'Review Reply' : 'Review',
+            content: r.content || '', createdAt: r.createdAt,
+            score: (r.helpful||0) - (r.notHelpful||0),
+            seriesTitle: s.title || 'Unknown', seriesId: r.seriesId,
+            href: `series.html?id=${encodeURIComponent(r.seriesId||'')}#review-${d.id}`
+          });
+        });
+      } catch(e){ console.warn('reviews query failed', e); }
+
+      return out;
+    }
+
+    function renderComments(){
+      const list = document.getElementById('commentsList');
+      let items = state.cAll.slice();
+      if (state.cSort === 'newest'){
+        items.sort((a,b)=>(b.createdAt?.toMillis?.()||0)-(a.createdAt?.toMillis?.()||0));
+      } else {
+        items.sort((a,b)=>(b.score||0)-(a.score||0));
+      }
+      if (!items.length){ list.innerHTML='<p style="color:var(--text-muted);">No comments yet.</p>'; document.getElementById('commentsPager').innerHTML=''; return; }
+      const slice = items.slice((state.cPage-1)*PAGE_SIZE, state.cPage*PAGE_SIZE);
+      list.innerHTML = slice.map(c => {
+        const plain = (c.content||'').replace(/<[^>]+>/g,'').slice(0,280);
+        return `<a class="activity-comment" href="${escapeHtml(c.href)}">
+          <div class="activity-comment__head">
+            <div><span class="activity-comment__kind">${escapeHtml(c.kind)}</span><span class="activity-comment__series">${escapeHtml(c.seriesTitle)}</span></div>
+            <div>${timeAgo(c.createdAt)}</div>
+          </div>
+          <div class="activity-comment__body">${escapeHtml(plain)}</div>
+        </a>`;
+      }).join('');
+      renderPager(document.getElementById('commentsPager'), items.length, state.cPage, p => { state.cPage=p; renderComments(); window.scrollTo({top: list.offsetTop-80, behavior:'smooth'}); });
+    }
+
+    // ----- Tab plumbing -----
+    document.querySelectorAll('.tabs .tab').forEach(t => t.onclick = () => {
+      document.querySelectorAll('.tabs .tab').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      document.querySelector(`[data-tab-content="${t.dataset.tab}"]`).classList.add('active');
+    });
+    document.querySelectorAll('[data-favtab]').forEach(b => b.onclick = () => {
+      document.querySelectorAll('[data-favtab]').forEach(x => { x.classList.remove('active'); x.style.background='transparent'; x.style.color='var(--text-secondary)'; });
+      b.classList.add('active'); b.style.background='var(--primary,#8b5cf6)'; b.style.color='#fff';
+      state.favSubtab = b.dataset.favtab; state.favPage = 1; renderFav();
+    });
+    // Init active style
+    setTimeout(()=>{const a=document.querySelector('[data-favtab].active');if(a){a.style.background='var(--primary,#8b5cf6)';a.style.color='#fff';}const s=document.querySelector('[data-csort].active');if(s){s.style.background='var(--primary,#8b5cf6)';s.style.color='#fff';}},0);
+    document.querySelectorAll('[data-csort]').forEach(b => b.onclick = () => {
+      document.querySelectorAll('[data-csort]').forEach(x => { x.classList.remove('active'); x.style.background='transparent'; x.style.color='var(--text-secondary)'; });
+      b.classList.add('active'); b.style.background='var(--primary,#8b5cf6)'; b.style.color='#fff';
+      state.cSort = b.dataset.csort; state.cPage = 1; renderComments();
+    });
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      setTimeout(() => document.getElementById('loadingScreen').classList.add('hidden'), 400);
+      if (!uid) { document.querySelector('main .container').innerHTML = '<p>Missing user id.</p>'; return; }
+
+      const profile = await EXPSystem.getPublicProfile(uid);
+      if (!profile) { document.querySelector('main .container').innerHTML = '<p>User not found.</p>'; return; }
+      state.profile = profile;
+
+      document.title = `${profile.username} - YoruVerse`;
+      document.getElementById('userAvatar').src = profile.avatar;
+      if (profile.coverImage){
+        const cov = document.getElementById('userCover');
+        cov.style.backgroundImage = `url('${String(profile.coverImage).replace(/'/g,"\\'")}')`;
+        const cx = Number.isFinite(profile.coverPositionX) ? profile.coverPositionX : 50;
+        const cy = Number.isFinite(profile.coverPositionY) ? profile.coverPositionY : 50;
+        cov.style.backgroundPosition = `${cx}% ${cy}%`;
+        cov.style.backgroundSize = 'cover';
+        cov.style.backgroundRepeat = 'no-repeat';
+      }
+      document.getElementById('userBio').textContent = profile.bio || '';
+      document.querySelector('.profile-name').childNodes[0].nodeValue = profile.username + ' ';
+      document.getElementById('userLevelBadge').innerHTML = EXPSystem.renderLevelBadge(profile.level);
+      document.getElementById('userTitleBadge').innerHTML = profile.selectedTitleId ? EXPSystem.renderTitleBadge(profile.selectedTitleId) : '';
+      const userRoleEl = document.getElementById('userRoleBadge');
+      if (userRoleEl) userRoleEl.innerHTML = EXPSystem.renderRoleBadge ? EXPSystem.renderRoleBadge(profile.role) : '';
+
+      const p = EXPSystem.progressForExp(profile.exp);
+      document.getElementById('expBarFill').style.width = p.percent + '%';
+      document.getElementById('expBarLevel').textContent = `Level ${p.level}`;
+      document.getElementById('expBarText').textContent = `${p.intoLevel} / ${p.neededForNext} XP`;
+      document.getElementById('streakText').textContent = `${profile.dailyStreak}-day streak`;
+      document.getElementById('chaptersReadText').textContent = `${profile.chaptersReadCount} chapters read`;
+
+      document.getElementById('statFavorites').textContent = profile.favoritesCount;
+      document.getElementById('statFollowing').textContent = profile.followingCount;
+      document.getElementById('statRead').textContent = profile.chaptersReadCount;
+      const followers = await EXPSystem.getFollowerCount(uid);
+      document.getElementById('statFollowers').textContent = followers;
+
+      // Titles
+      const unlocked = new Set(profile.unlockedTitleIds);
+      document.getElementById('titlesList').innerHTML = EXPSystem.TITLES
+        .filter(t => unlocked.has(t.id))
+        .map(t => `<div class="title-card"><div>${EXPSystem.renderTitleBadge(t.id)}</div><div class="title-card__meta">Unlocked</div></div>`)
+        .join('') || '<p style="color:var(--text-muted);">No titles unlocked yet.</p>';
+
+      // Data: recent reading (sorted desc by readAt)
+      state.recent = (profile.readingHistory || []).slice().sort((a,b)=>{
+        const am = a.readAt?.toMillis?.()||0, bm = b.readAt?.toMillis?.()||0; return bm-am;
+      });
+      // followed series stored as `followedSeries` in user doc
+      try {
+        const snap = await db.collection('users').doc(uid).get();
+        state.followSeries = snap.data()?.followedSeries || [];
+      } catch(_){}
+      state.favSeries = profile.favorites || [];
+
+      renderRecent();
+      renderFav();
+      loadAllComments().then(all => { state.cAll = all; renderComments(); });
+
+      // Follow / unfollow
+      const me = auth.currentUser;
+      const ab = document.getElementById('actionBar');
+      if (!me) {
+        ab.innerHTML = `<a href="login.html" class="btn btn-primary">Login to follow</a>`;
+      } else if (me.uid === uid) {
+        ab.innerHTML = `<a href="profile.html" class="btn btn-secondary"><i class="fas fa-cog"></i> Edit my profile</a>`;
+      } else {
+        const isF = await EXPSystem.isFollowing(uid);
+        ab.innerHTML = `<button class="btn ${isF ? 'btn-outline' : 'btn-primary'}" id="followBtn">
+          <i class="fas ${isF ? 'fa-user-check' : 'fa-user-plus'}"></i> ${isF ? 'Following' : 'Follow'}
+        </button>`;
+        document.getElementById('followBtn').onclick = async () => {
+          try {
+            const f = await EXPSystem.isFollowing(uid);
+            if (f) await EXPSystem.unfollowUser(uid); else await EXPSystem.followUser(uid);
+            location.reload();
+          } catch (e) { showToast(e.message || 'Failed', 'error'); }
+        };
+      }
+    });
+  </script>
+  <script src="../js/shared-header.js"></script>
+</body>
+</html>

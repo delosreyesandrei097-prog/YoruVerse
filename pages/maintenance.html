@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Under Maintenance - YoruVerse</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/donation.css">
+  <link rel="icon" type="image/png" href="../images/O.png">
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <main class="maintenance-wrap">
+    <div class="maintenance-card">
+      <div class="maintenance-icon"><i class="fas fa-screwdriver-wrench"></i></div>
+      <a href="../index.html" class="logo" style="justify-content:center; display:flex;">
+        <img src="../images/Y.png" alt="YoruVerse" class="logo-text-img">
+      </a>
+      <h1>Website Under Maintenance</h1>
+      <p id="maintenanceMessage">We are currently performing maintenance and improvements to the website.</p>
+      <p>Please check back later.</p>
+      <p style="margin-top:18px;color:var(--text-muted);font-size:0.9rem;">Thank you for your patience and support.</p>
+    </div>
+  </main>
+  <script src="../js/path-utils.js"></script>
+  <script src="../js/firebase-config.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/db.js"></script>
+  <script>
+    (async function () {
+      try {
+        Auth.init && Auth.init();
+        const m = await DB.getMaintenanceMode();
+        if (m && m.message) document.getElementById('maintenanceMessage').textContent = m.message;
+        // If maintenance got turned off, send everyone home.
+        if (m && !m.enabled) {
+          window.location.replace(AppPath.to('index.html'));
+          return;
+        }
+        // Allow admins/moderators to escape back to admin dashboard.
+        firebase.auth().onAuthStateChanged(async (user) => {
+          if (!user) return;
+          try {
+            const snap = await firebase.firestore().collection('users').doc(user.uid).get();
+            const role = snap.exists ? snap.data().role : null;
+            if (role === 'admin' || role === 'moderator') {
+              window.location.replace(AppPath.to('pages/admin.html'));
+            }
+          } catch (_) {}
+        });
+      } catch (e) { console.warn(e); }
+    })();
+  </script>
+</body>
+</html>

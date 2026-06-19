@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Community Discussion Board - YoruVerse</title>
+  <meta name="description" content="Community discussion board for manhwa fans — suggest series, ask staff, and discuss the website.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/exp.css">
+  <link rel="stylesheet" href="../css/donation.css">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="icon" type="image/png" href="../images/O.png">
+
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+  <style>
+    .discussion-board-wrap { max-width: 900px; margin: 0 auto; padding: var(--space-lg) var(--space-md); }
+    .discussion-intro {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: var(--space-lg);
+      margin-bottom: var(--space-lg);
+    }
+    .discussion-intro h1 {
+      margin: 0 0 .5rem;
+      font-size: 1.5rem;
+      display: flex; align-items: center; gap: .6rem;
+    }
+    .discussion-intro p { color: var(--text-secondary); margin: 0; line-height: 1.55; }
+
+    .discussion-pinned-badge {
+      display: inline-flex; align-items: center; gap: .25rem;
+      font-size: .7rem; font-weight: 700; letter-spacing: .03em;
+      padding: .15rem .5rem; border-radius: 999px;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #fff;
+      text-transform: uppercase;
+    }
+    .comment-pinned {
+      border-left: 3px solid #f59e0b;
+      background: linear-gradient(90deg, rgba(245,158,11,.08), transparent 60%);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="discussion-board-wrap">
+
+      <div class="discussion-intro">
+        <h1><i class="fas fa-users"></i> Community Discussion Board</h1>
+        <p>
+          Suggest manhwa, ask admins and moderators, share feedback, and chat
+          with the community. Be respectful — review the
+          <a href="#" onclick="Discussion.openRules();return false;" style="color:var(--accent);">community rules</a>
+          before posting.
+        </p>
+      </div>
+
+      <section class="comments-section" id="discussionSection">
+        <div class="discussion-header">
+          <h2 class="discussion-title">
+            <i class="far fa-comments"></i> Discussions
+            <span style="color: var(--text-muted); font-size: 0.875rem;">(<span id="commentCount">0</span>)</span>
+          </h2>
+          <div class="discussion-sort" style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+            <button class="sort-btn active" data-discussion-sort="new">New</button>
+            <button class="sort-btn" data-discussion-sort="top">Top</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="discussionRulesBtn" onclick="Discussion.openRules()" title="View community rules">
+              <i class="fas fa-gavel"></i> Rules
+            </button>
+          </div>
+        </div>
+
+        <!-- Post Form (mirrors chapter comment form) -->
+        <div class="comment-form" id="commentForm">
+          <img data-user-avatar src="../images/default-avatar.png" alt="You" class="comment-avatar" id="commentAvatar">
+          <div class="comment-input-wrapper">
+            <div class="format-toolbar" role="toolbar" aria-label="Text formatting">
+              <button type="button" class="format-btn" title="Bold (**text**)" onclick="Comments.applyFormat('#commentInput','bold')"><b>B</b></button>
+              <button type="button" class="format-btn" title="Italic (*text*)" onclick="Comments.applyFormat('#commentInput','italic')"><i>I</i></button>
+              <button type="button" class="format-btn" title="Strikethrough (/text/)" onclick="Comments.applyFormat('#commentInput','strike')"><s>S</s></button>
+              <button type="button" class="format-btn" data-format-image title="Insert Image (URL)" onclick="Comments.insertImageInto('#commentInput')"><i class="far fa-image"></i></button>
+            </div>
+            <textarea class="comment-input" id="commentInput" rows="3" placeholder="Start a discussion, suggest a manhwa, or ask the team... (Login required)"></textarea>
+            <div class="comment-actions" style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:center;">
+              <label style="display:inline-flex;align-items:center;gap:.4rem;font-size:.875rem;color:var(--text-secondary);cursor:pointer;margin-right:auto;">
+                <input type="checkbox" id="commentSpoiler" style="width:16px;height:16px;">
+                <i class="fas fa-eye-slash"></i> Mark as spoiler
+              </label>
+              <button class="btn btn-primary btn-sm" id="submitComment" type="button">
+                <i class="fas fa-paper-plane"></i> Post Discussion
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Guest Prompt -->
+        <div id="guestCommentPrompt" class="comment-form" style="display:none;">
+          <div style="flex:1;padding:var(--space-md);background:var(--bg-card);border-radius:var(--radius-md);text-align:center;">
+            <p style="color:var(--text-secondary);margin-bottom:var(--space-md);">
+              <i class="fas fa-lock" style="margin-right:var(--space-sm);"></i>
+              Please login to join the discussion
+            </p>
+            <a href="login.html" class="btn btn-primary">Login to Post</a>
+          </div>
+        </div>
+
+        <!-- List -->
+        <div id="commentsLoading" style="display:none;">
+          <div style="display:flex;justify-content:center;padding:2rem;">
+            <div class="spinner spinner-sm"></div>
+          </div>
+        </div>
+        <div id="commentsList"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Core scripts (same order as chapter.html) -->
+  <script src="../js/path-utils.js"></script>
+  <script src="../js/firebase-config.js"></script>
+  <script src="../js/db.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/exp-system.js"></script>
+  <script src="../js/donation.js"></script>
+  <script src="../js/ui.js"></script>
+  <script src="../js/comments.js"></script>
+  <script src="../js/discussion.js"></script>
+  <script src="../js/shared-header.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Toggle guest vs logged-in composer, like chapter.html does.
+      const applyAuthUI = (user) => {
+        const form = document.getElementById('commentForm');
+        const guest = document.getElementById('guestCommentPrompt');
+        if (form && guest) {
+          form.style.display = user ? 'flex' : 'none';
+          guest.style.display = user ? 'none' : 'flex';
+        }
+      };
+      try { firebase.auth().onAuthStateChanged(applyAuthUI); } catch (_) {}
+      Discussion.init();
+    });
+  </script>
+</body>
+</html>

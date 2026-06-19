@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notifications - YoruVerse</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/donation.css">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="icon" type="image/png" href="../images/O.png">
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <style>
+    .notif-card { position: relative; }
+    .notif-edited { font-size: 0.72rem; font-weight: 500; color: var(--text-secondary); opacity: 0.75; }
+    .notif-admin-actions {
+      position: absolute; top: 10px; right: 12px;
+      display: flex; gap: 6px; z-index: 2;
+    }
+    .notif-edit-btn, .notif-delete-btn {
+      background: var(--bg-tertiary); color: var(--text-secondary);
+      border: 1px solid var(--border-color, rgba(255,255,255,0.08));
+      width: 32px; height: 32px; border-radius: 8px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; transition: .15s;
+    }
+    .notif-edit-btn:hover { color: var(--text-primary); background: var(--bg-secondary); }
+    .notif-delete-btn:hover { color: #fff; background: #c0392b; border-color: #c0392b; }
+    .ann-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      display: none; align-items: center; justify-content: center;
+      padding: 16px; z-index: 1000;
+    }
+    .ann-overlay.open { display: flex; }
+    .ann-modal {
+      background: var(--bg-secondary, #1a1a1a); color: var(--text-primary, #fff);
+      border: 1px solid var(--border-color, rgba(255,255,255,0.08));
+      border-radius: 14px; width: 100%; max-width: 560px;
+      max-height: 85vh; display: flex; flex-direction: column;
+      padding: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+    .ann-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .ann-modal-title { font-size: 1.25rem; font-weight: 700; margin: 0; line-height: 1.3; }
+    .ann-modal-meta { font-size: 0.8rem; color: var(--text-secondary); margin: 6px 0 14px; }
+    .ann-modal-body {
+      flex: 1; overflow-y: auto; white-space: pre-wrap; word-break: break-word;
+      line-height: 1.6; font-size: 0.95rem;
+    }
+    .ann-modal-foot { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+  </style>
+</head>
+<body>
+  <div class="loading-screen" id="loadingScreen"><div class="spinner"></div><p>Loading notifications...</p></div>
+
+  <header class="header">
+    <div class="header-content">
+      <a href="../index.html" class="logo"><img src="../images/Y.png" alt="YoruVerse" class="logo-text-img"></a>
+      <div class="search-bar"><i class="fas fa-search search-icon"></i><input type="text" placeholder="Search..." data-search-input></div>
+      <nav class="nav-links">
+        <a href="../index.html" class="nav-link">Home</a>
+        <a href="browse.html" class="nav-link">Browse</a>
+        <a href="library.html" class="nav-link">Library</a>
+      </nav>
+      <div class="header-actions">
+        <button class="icon-btn" data-theme-toggle><i class="fas fa-moon"></i></button>
+        <a href="profile.html" class="avatar-btn" data-auth-required style="display:none;"><img data-user-avatar src="../images/default-avatar.png" alt="Profile"></a>
+        <a href="login.html" class="btn btn-primary btn-sm" data-auth-guest>Login</a>
+        <button class="icon-btn mobile-menu-btn" data-mobile-menu-btn><i class="fas fa-bars"></i></button>
+      </div>
+    </div>
+  </header>
+
+  <div class="mobile-menu" data-mobile-menu>
+    <div class="mobile-menu-panel">
+      <div class="mobile-menu-header">
+        <a href="../index.html" class="logo"><img src="../images/Y.png" alt="YoruVerse" class="logo-text-img"></a>
+        <button class="icon-btn" data-mobile-menu-close><i class="fas fa-times"></i></button>
+      </div>
+      <div class="mobile-menu-links">
+        <a href="../index.html" class="mobile-menu-link"><i class="fas fa-home"></i> Home</a>
+        <a href="browse.html" class="mobile-menu-link"><i class="fas fa-search"></i> Browse</a>
+        <a href="library.html" class="mobile-menu-link" data-auth-required style="display:none;"><i class="fas fa-bookmark"></i> Library</a>
+        <a href="history.html" class="mobile-menu-link" data-auth-required style="display:none;"><i class="fas fa-history"></i> History</a>
+        <a href="notifications.html" class="mobile-menu-link active" data-auth-required><i class="fas fa-bell"></i> Notifications</a>
+        <a href="profile.html" class="mobile-menu-link" data-auth-required style="display:none;"><i class="fas fa-user"></i> Profile</a>
+        <a href="settings.html" class="mobile-menu-link" data-auth-required style="display:none;"><i class="fas fa-cog"></i> Settings</a>
+        <a href="#" class="mobile-menu-link" data-auth-required style="display:none;" onclick="Auth.logout(); return false;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        <a href="login.html" class="mobile-menu-link" data-auth-guest><i class="fas fa-sign-in-alt"></i> Login</a>
+      </div>
+    </div>
+  </div>
+
+  <main style="padding-top: var(--space-xl);">
+    <div class="container">
+      <div class="section-header">
+        <h1 class="section-title"><div class="section-title-icon"><i class="fas fa-bell"></i></div>Notifications</h1>
+        <button class="btn btn-ghost btn-sm" onclick="markAllRead()" id="markAllReadBtn" style="display:none;"><i class="fas fa-check-double"></i> Mark All Read</button>
+      </div>
+      <div class="notif-tabs" id="notifTabs" role="tablist">
+        <button class="notif-tab active" data-notif-filter="all" onclick="setNotifFilter('all')">All <span class="notif-tab-count" id="cntAll">0</span></button>
+        <button class="notif-tab" data-notif-filter="chapters" onclick="setNotifFilter('chapters')">Chapters <span class="notif-tab-count" id="cntChapters">0</span></button>
+        <button class="notif-tab" data-notif-filter="comments" onclick="setNotifFilter('comments')">Comments <span class="notif-tab-count" id="cntComments">0</span></button>
+      </div>
+      <div id="notificationsList">
+        <div class="notification-item"><div class="skeleton" style="width:40px;height:40px;border-radius:10px;flex-shrink:0;"></div><div style="flex:1;"><div class="skeleton" style="width:60%;height:14px;margin-bottom:8px;"></div><div class="skeleton" style="width:80%;height:12px;"></div></div></div>
+        <div class="notification-item"><div class="skeleton" style="width:40px;height:40px;border-radius:10px;flex-shrink:0;"></div><div style="flex:1;"><div class="skeleton" style="width:60%;height:14px;margin-bottom:8px;"></div><div class="skeleton" style="width:80%;height:12px;"></div></div></div>
+        <div class="notification-item"><div class="skeleton" style="width:40px;height:40px;border-radius:10px;flex-shrink:0;"></div><div style="flex:1;"><div class="skeleton" style="width:60%;height:14px;margin-bottom:8px;"></div><div class="skeleton" style="width:80%;height:12px;"></div></div></div>
+        <div class="notification-item"><div class="skeleton" style="width:40px;height:40px;border-radius:10px;flex-shrink:0;"></div><div style="flex:1;"><div class="skeleton" style="width:60%;height:14px;margin-bottom:8px;"></div><div class="skeleton" style="width:80%;height:12px;"></div></div></div>
+        <div class="notification-item"><div class="skeleton" style="width:40px;height:40px;border-radius:10px;flex-shrink:0;"></div><div style="flex:1;"><div class="skeleton" style="width:60%;height:14px;margin-bottom:8px;"></div><div class="skeleton" style="width:80%;height:12px;"></div></div></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Full announcement viewer -->
+  <div class="ann-overlay" id="announcementModal" onclick="if(event.target===this) closeAnnouncementModal()">
+    <div class="ann-modal" role="dialog" aria-modal="true" aria-labelledby="annModalTitle">
+      <div class="ann-modal-head">
+        <h2 class="ann-modal-title" id="annModalTitle">Announcement</h2>
+        <button class="icon-btn" aria-label="Close" onclick="closeAnnouncementModal()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="ann-modal-meta" id="annModalMeta"></div>
+      <div class="ann-modal-body" id="annModalBody"></div>
+      <div class="ann-modal-foot">
+        <button class="btn btn-ghost btn-sm" id="annModalEditBtn" style="display:none;"><i class="fas fa-pen"></i> Edit</button>
+        <button class="btn btn-ghost btn-sm" id="annModalDeleteBtn" style="display:none; color:#e74c3c;"><i class="fas fa-trash"></i> Delete</button>
+        <button class="btn btn-primary btn-sm" onclick="closeAnnouncementModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin: edit announcement -->
+  <div class="ann-overlay" id="announcementEditModal" onclick="if(event.target===this) closeAnnouncementEditModal()">
+    <div class="ann-modal" role="dialog" aria-modal="true" aria-labelledby="annEditHeading">
+      <div class="ann-modal-head">
+        <h2 class="ann-modal-title" id="annEditHeading">Edit Announcement</h2>
+        <button class="icon-btn" aria-label="Close" onclick="closeAnnouncementEditModal()"><i class="fas fa-times"></i></button>
+      </div>
+      <input type="hidden" id="annEditId">
+      <div class="form-group">
+        <label class="form-label">Title</label>
+        <input type="text" id="annEditTitle" class="form-input" placeholder="Announcement title">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Content</label>
+        <textarea id="annEditMessage" class="form-input" rows="6" placeholder="Announcement content"></textarea>
+      </div>
+      <div class="ann-modal-foot">
+        <button class="btn btn-ghost btn-sm" onclick="closeAnnouncementEditModal()">Cancel</button>
+        <button class="btn btn-primary btn-sm" onclick="saveAnnouncementEdit()"><i class="fas fa-save"></i> Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-grid" style="grid-template-columns: 1fr; margin-bottom: var(--space-lg);"><div style="text-align: center;"><a href="../index.html" class="logo" style="justify-content: center;"><img src="../images/Y.png" alt="YoruVerse" class="logo-text-img"></a></div></div>
+    </div>
+  </footer>
+
+  <script src="../js/path-utils.js"></script>
+  <script src="../js/firebase-config.js"></script>
+  <script src="../js/ui.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/db.js"></script>
+
+  <script>
+    UI.init();
+    let _notifications = [];
+    let _filter = 'all';
+    let _isAdmin = false;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (!(await Auth.requireAuth())) return;
+      try { _isAdmin = !!(Auth.hasRole && Auth.hasRole('admin')); } catch (_) { _isAdmin = false; }
+      setTimeout(() => document.getElementById('loadingScreen').classList.add('hidden'), 500);
+      await loadNotifications();
+      // userData may load slightly after auth resolves — re-check admin role
+      // and re-render so the Edit controls appear reliably for admins.
+      for (let i = 0; i < 10 && !(Auth.getUserData && Auth.getUserData()); i++) {
+        await new Promise(r => setTimeout(r, 200));
+      }
+      const adminNow = !!(Auth.hasRole && Auth.hasRole('admin'));
+      if (adminNow !== _isAdmin) { _isAdmin = adminNow; renderNotifications(); }
+    });
+
+    function relativeTime(date) {
+      if (!date) return 'Recently';
+      const diff = (Date.now() - date.getTime()) / 1000;
+      if (diff < 60) return 'Just now';
+      if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+      if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+      if (diff < 7 * 86400) return Math.floor(diff / 86400) + 'd ago';
+      return date.toLocaleDateString();
+    }
+
+    function escapeHtml(s) {
+      return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function setNotifFilter(f) {
+      _filter = f;
+      document.querySelectorAll('.notif-tab').forEach(b => {
+        b.classList.toggle('active', b.dataset.notifFilter === f);
+      });
+      renderNotifications();
+    }
+
+    async function loadNotifications() {
+      try {
+        _notifications = await DB.getNotifications(auth.currentUser.uid);
+        renderNotifications();
+      } catch (e) { console.error(e); }
+    }
+
+    function categoryOf(n) {
+      if (n.category) return n.category;
+      if (n.type === 'new_chapter') return 'chapters';
+      if (n.type === 'comment_reply') return 'comments';
+      return 'other';
+    }
+
+    function renderNotifications() {
+      const container = document.getElementById('notificationsList');
+      const all = _notifications;
+      const chapters = all.filter(n => categoryOf(n) === 'chapters');
+      const comments = all.filter(n => categoryOf(n) === 'comments');
+      document.getElementById('cntAll').textContent = all.length;
+      document.getElementById('cntChapters').textContent = chapters.length;
+      document.getElementById('cntComments').textContent = comments.length;
+
+      const unreadCount = all.filter(n => !n.read).length;
+      document.getElementById('markAllReadBtn').style.display = unreadCount > 0 ? '' : 'none';
+
+      const list = _filter === 'all' ? all : _filter === 'chapters' ? chapters : comments;
+      if (list.length === 0) {
+        container.innerHTML = UI.renderEmptyState(
+          'No Notifications',
+          _filter === 'comments'
+            ? 'You will see replies to your comments here.'
+            : _filter === 'chapters'
+              ? 'Follow or bookmark a series to get new chapter alerts.'
+              : 'You have no notifications yet.',
+          'fa-bell'
+        );
+        return;
+      }
+
+      container.innerHTML = list.map(n => renderNotificationCard(n)).join('');
+    }
+
+    function renderAdminActions(n, { withEdit }) {
+      if (!_isAdmin) return '';
+      const edit = withEdit
+        ? `<button class="notif-edit-btn" title="Edit announcement" onclick="event.stopPropagation(); editAnnouncement('${n.id}')"><i class="fas fa-pen"></i></button>`
+        : '';
+      const del = `<button class="notif-delete-btn" title="Delete notification" onclick="event.stopPropagation(); deleteNotification('${n.id}')"><i class="fas fa-trash"></i></button>`;
+      return `<div class="notif-admin-actions">${edit}${del}</div>`;
+    }
+
+    function renderNotificationCard(n) {
+      const date = n.createdAt?.toDate?.() ? n.createdAt.toDate() : null;
+      const time = relativeTime(date);
+      const cat = categoryOf(n);
+      const cover = n.coverImage || '';
+      const seriesTitle = escapeHtml(n.seriesTitle || n.title || '');
+      const clickAttrs = `data-notif-id="${n.id}" onclick="handleNotificationClick('${n.id}')"`;
+
+      if (cat === 'chapters') {
+        return `
+          <div class="notif-card ${n.read ? '' : 'unread'}" ${clickAttrs}>
+            ${cover
+              ? `<img class="notif-cover" src="${escapeHtml(cover)}" alt="" loading="lazy" onerror="this.style.display='none'">`
+              : `<div class="notif-cover notif-cover-fallback"><i class="fas fa-book"></i></div>`}
+            <div class="notif-body">
+              <div class="notif-card-title">${seriesTitle}</div>
+              <div class="notif-card-sub"><span class="notif-tag notif-tag-chapter">New Chapter Released</span></div>
+              <div class="notif-card-msg">Chapter ${escapeHtml(String(n.chapterNumber || ''))}${n.chapterTitle ? ' &middot; ' + escapeHtml(n.chapterTitle) : ''}</div>
+              <div class="notif-card-meta">${time}</div>
+            </div>
+            ${renderAdminActions(n, { withEdit: false })}
+            ${n.read ? '' : '<span class="notif-dot" aria-label="unread"></span>'}
+          </div>`;
+      }
+
+      if (cat === 'comments') {
+        const who = escapeHtml(n.replierUsername || 'Someone');
+        const ctx = n.chapterNumber ? `Chapter ${escapeHtml(String(n.chapterNumber))}` : '';
+        return `
+          <div class="notif-card ${n.read ? '' : 'unread'}" ${clickAttrs}>
+            ${cover
+              ? `<img class="notif-cover" src="${escapeHtml(cover)}" alt="" loading="lazy" onerror="this.style.display='none'">`
+              : `<div class="notif-cover notif-cover-fallback"><i class="fas fa-comment"></i></div>`}
+            <div class="notif-body">
+              <div class="notif-card-title">New Reply to Your Comment</div>
+              <div class="notif-card-sub"><strong>${who}</strong> replied on <span class="notif-link">${seriesTitle}${ctx ? ' - ' + ctx : ''}</span></div>
+              ${n.preview ? `<div class="notif-card-quote">"${escapeHtml(n.preview)}"</div>` : ''}
+              <div class="notif-card-meta">${time}</div>
+            </div>
+            ${renderAdminActions(n, { withEdit: false })}
+            ${n.read ? '' : '<span class="notif-dot" aria-label="unread"></span>'}
+          </div>`;
+      }
+
+      // Fallback (announcement / other)
+      const icon = n.type === 'announcement' ? 'fa-bullhorn' : 'fa-bell';
+      const editedLabel = n.editedAt
+        ? `<span class="notif-edited" title="Edited ${escapeHtml(formatFullDate(n.editedAt?.toDate?.() || null))}">(edited)</span>`
+        : '';
+      return `
+        <div class="notif-card ${n.read ? '' : 'unread'}" ${clickAttrs}>
+          <div class="notif-cover notif-cover-fallback"><i class="fas ${icon}"></i></div>
+          <div class="notif-body">
+            <div class="notif-card-title">${escapeHtml(n.title || '')} ${editedLabel}</div>
+            <div class="notif-card-msg">${escapeHtml(n.message || '')}</div>
+            <div class="notif-card-meta">${time}${n.postedByName ? ' &middot; ' + escapeHtml(n.postedByName) : ''}</div>
+          </div>
+          ${renderAdminActions(n, { withEdit: true })}
+          ${n.read ? '' : '<span class="notif-dot" aria-label="unread"></span>'}
+        </div>`;
+    }
+
+    // Admin-only: delete a notification / announcement. Requires confirmation
+    // to avoid accidental deletion. Firestore Rules enforce admin-only at the
+    // server side as well — if a non-admin somehow triggers this, the write
+    // is rejected with a permission error.
+    async function deleteNotification(notificationId) {
+      if (!_isAdmin) return;
+      const n = _notifications.find(x => x.id === notificationId);
+      const label = n ? (n.title || 'this notification') : 'this notification';
+      if (!confirm(`Delete "${label}"? This cannot be undone.`)) return;
+      try {
+        await DB.deleteNotification(notificationId);
+        _notifications = _notifications.filter(x => x.id !== notificationId);
+        renderNotifications();
+        showToast('Notification deleted', 'success');
+      } catch (err) {
+        showToast(err.message || 'Failed to delete notification', 'error');
+      }
+    }
+
+    async function handleNotificationClick(notificationId) {
+      const n = _notifications.find(x => x.id === notificationId);
+      if (!n) return;
+      try { await DB.markNotificationRead(notificationId); } catch (_) {}
+      const cat = categoryOf(n);
+      if (cat === 'chapters' && n.seriesId && (n.chapterId || n.chapterNumber)) {
+        const url = n.chapterId
+          ? `pages/chapter.html?series=${n.seriesId}&chapter=${n.chapterId}`
+          : `pages/chapter.html?series=${n.seriesId}&chapter=${n.chapterNumber}`;
+        window.location.href = AppPath.to(url);
+        return;
+      }
+      if (cat === 'comments' && n.seriesId && n.chapterId) {
+        const anchor = n.replyId ? `#comment-${n.replyId}` : (n.parentCommentId ? `#comment-${n.parentCommentId}` : '');
+        window.location.href = AppPath.to(`pages/chapter.html?series=${n.seriesId}&chapter=${n.chapterId}${anchor}`);
+        return;
+      }
+      if (n.seriesId) {
+        window.location.href = AppPath.to(`pages/series.html?id=${n.seriesId}`);
+        return;
+      }
+      // Announcements / generic notifications: open the full-content viewer
+      // so users can read the entire title + message without leaving the page.
+      openAnnouncementModal(notificationId);
+    }
+
+    function formatFullDate(date) {
+      if (!date) return '';
+      try {
+        return date.toLocaleString(undefined, {
+          year: 'numeric', month: 'long', day: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        });
+      } catch (_) { return date.toLocaleString(); }
+    }
+
+    // ============ FULL ANNOUNCEMENT VIEWER ============
+    function openAnnouncementModal(notificationId) {
+      const n = _notifications.find(x => x.id === notificationId);
+      if (!n) return;
+      const posted = n.createdAt?.toDate?.() ? n.createdAt.toDate() : null;
+      const edited = n.editedAt?.toDate?.() ? n.editedAt.toDate() : null;
+      document.getElementById('annModalTitle').textContent = n.title || 'Announcement';
+      document.getElementById('annModalBody').textContent = n.message || '';
+      const metaParts = [];
+      if (posted) metaParts.push('Posted ' + formatFullDate(posted));
+      if (n.postedByName) metaParts.push('by ' + n.postedByName);
+      if (edited) metaParts.push('• Edited ' + formatFullDate(edited));
+      document.getElementById('annModalMeta').textContent = metaParts.join(' ');
+      const editBtn = document.getElementById('annModalEditBtn');
+      const delBtn = document.getElementById('annModalDeleteBtn');
+      if (_isAdmin) {
+        editBtn.style.display = '';
+        editBtn.onclick = () => { closeAnnouncementModal(); editAnnouncement(notificationId); };
+        delBtn.style.display = '';
+        delBtn.onclick = async () => { closeAnnouncementModal(); await deleteNotification(notificationId); };
+      } else {
+        editBtn.style.display = 'none';
+        delBtn.style.display = 'none';
+      }
+      document.getElementById('announcementModal').classList.add('open');
+    }
+
+    function closeAnnouncementModal() {
+      document.getElementById('announcementModal').classList.remove('open');
+    }
+
+    // ============ ADMIN: EDIT ANNOUNCEMENT ============
+    function editAnnouncement(notificationId) {
+      const n = _notifications.find(x => x.id === notificationId);
+      if (!n || !_isAdmin) return;
+      document.getElementById('annEditId').value = notificationId;
+      document.getElementById('annEditTitle').value = n.title || '';
+      document.getElementById('annEditMessage').value = n.message || '';
+      document.getElementById('announcementEditModal').classList.add('open');
+    }
+
+    function closeAnnouncementEditModal() {
+      document.getElementById('announcementEditModal').classList.remove('open');
+    }
+
+    async function saveAnnouncementEdit() {
+      const id = document.getElementById('annEditId').value;
+      const title = document.getElementById('annEditTitle').value.trim();
+      const message = document.getElementById('annEditMessage').value.trim();
+      if (!title || !message) {
+        showToast('Title and message are required', 'warning');
+        return;
+      }
+      try {
+        await DB.updateNotification(id, { title, message });
+        const local = _notifications.find(x => x.id === id);
+        if (local) {
+          local.title = title;
+          local.message = message;
+          local.editedAt = { toDate: () => new Date() };
+        }
+        closeAnnouncementEditModal();
+        renderNotifications();
+        showToast('Announcement updated', 'success');
+      } catch (err) {
+        showToast(err.message || 'Failed to update announcement', 'error');
+      }
+    }
+
+    async function markAllRead() {
+      try {
+        const snapshot = await db.collection('notifications')
+          .where('userId', '==', auth.currentUser.uid)
+          .where('read', '==', false)
+          .get();
+        
+        const batch = db.batch();
+        snapshot.forEach(doc => {
+          batch.update(doc.ref, { read: true, readAt: firebase.firestore.FieldValue.serverTimestamp() });
+        });
+        await batch.commit();
+        
+        showToast('All notifications marked as read', 'success');
+        loadNotifications();
+      } catch (error) {
+        showToast('Failed to mark notifications as read', 'error');
+      }
+    }
+  </script>
+  <script src="../js/shared-header.js"></script>
+</body>
+</html>

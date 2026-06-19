@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Series Details - YoruVerse</title>
+  <meta name="description" content="View series details, chapters, and more.">
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/exp.css">
+  <link rel="stylesheet" href="../css/donation.css">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="icon" type="image/png" href="../images/O.png">
+  
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <div class="loading-screen" id="loadingScreen">
+    <div class="spinner"></div>
+    <p>Loading series...</p>
+  </div>
+
+  <!-- 18+ Content Warning Modal -->
+  <div id="adultWarningOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:1rem;">
+    <div role="dialog" aria-modal="true" aria-labelledby="adultWarningTitle" style="max-width:480px;width:100%;background:var(--bg-card,#141414);color:var(--text-primary,#fff);border:1px solid var(--border-color,#2a2a2a);border-radius:14px;padding:1.75rem 1.5rem;box-shadow:0 20px 60px rgba(0,0,0,0.5);text-align:center;">
+      <div style="font-size:2.25rem;line-height:1;margin-bottom:0.75rem;">
+        <i class="fas fa-exclamation-triangle" style="color:#f59e0b;"></i>
+      </div>
+      <h2 id="adultWarningTitle" style="margin:0 0 0.75rem;font-size:1.35rem;font-weight:700;">18+ Content Warning</h2>
+      <p style="margin:0 0 0.5rem;color:var(--text-secondary,#cfcfcf);line-height:1.5;">
+        This series contains mature content that may not be suitable for all audiences.
+      </p>
+      <p style="margin:0 0 1.5rem;color:var(--text-secondary,#cfcfcf);line-height:1.5;font-size:0.9rem;">
+        By continuing, you confirm that you are of legal age in your region and wish to view this content.
+      </p>
+      <div style="display:flex;gap:0.6rem;flex-wrap:wrap;justify-content:center;">
+        <button id="adultWarningBack" type="button" class="btn btn-ghost" style="flex:1 1 140px;min-width:120px;padding:0.7rem 1rem;border-radius:8px;background:transparent;border:1px solid var(--border-color,#2a2a2a);color:var(--text-primary,#fff);cursor:pointer;font-weight:600;">
+          <i class="fas fa-arrow-left"></i> Go Back
+        </button>
+        <button id="adultWarningContinue" type="button" class="btn btn-primary" style="flex:1 1 140px;min-width:120px;padding:0.7rem 1rem;border-radius:8px;background:var(--accent-primary,#6366f1);border:1px solid var(--accent-primary,#6366f1);color:#fff;cursor:pointer;font-weight:600;">
+          Continue <i class="fas fa-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-content">
+      <a href="../index.html" class="logo">
+        <img src="../images/Y.png" alt="YoruVerse" class="logo-text-img">
+      </a>
+      <div class="search-bar">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search manhwa..." data-search-input>
+      </div>
+      <nav class="nav-links">
+        <a href="../index.html" class="nav-link">Home</a>
+        <a href="browse.html" class="nav-link">Browse</a>
+        <a href="library.html" class="nav-link" data-auth-required style="display:none;">Library</a>
+      </nav>
+      <div class="header-actions">
+        <button class="icon-btn" data-theme-toggle><i class="fas fa-moon"></i></button>
+        <a href="profile.html" class="avatar-btn" data-auth-required style="display:none;">
+          <img data-user-avatar src="../images/default-avatar.png" alt="Profile">
+        </a>
+        <a href="login.html" class="btn btn-primary btn-sm" data-auth-guest>Login</a>
+        <button class="icon-btn mobile-menu-btn" data-mobile-menu-btn><i class="fas fa-bars"></i></button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Menu -->
+  <div class="mobile-menu" data-mobile-menu>
+    <div class="mobile-menu-panel">
+      <div class="mobile-menu-header">
+        <a href="../index.html" class="logo">
+          <img src="../images/Y.png" alt="YoruVerse" class="logo-text-img">
+        </a>
+        <button class="icon-btn" data-mobile-menu-close><i class="fas fa-times"></i></button>
+      </div>
+      <div class="mobile-menu-links">
+        <a href="../index.html" class="mobile-menu-link"><i class="fas fa-home"></i> Home</a>
+        <a href="browse.html" class="mobile-menu-link"><i class="fas fa-search"></i> Browse</a>
+        <a href="library.html" class="mobile-menu-link" data-auth-required style="display:none;"><i class="fas fa-bookmark"></i> Library</a>
+        <a href="history.html" class="mobile-menu-link" data-auth-required style="display:none;"><i class="fas fa-history"></i> History</a>
+        <a href="profile.html" class="mobile-menu-link" data-auth-required style="display:none;"><i class="fas fa-user"></i> Profile</a>
+        <a href="settings.html" class="mobile-menu-link" data-auth-required style="display:none;"><i class="fas fa-cog"></i> Settings</a>
+        <a href="admin.html" class="mobile-menu-link" data-admin-only style="display:none;"><i class="fas fa-shield-alt"></i> Admin Dashboard</a>
+        <a href="about.html" class="mobile-menu-link"><i class="fas fa-info-circle"></i> About</a>
+        <a href="#" class="mobile-menu-link" data-auth-required style="display:none;" onclick="Auth.logout(); return false;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        <a href="login.html" class="mobile-menu-link" data-auth-guest><i class="fas fa-sign-in-alt"></i> Login</a>
+      </div>
+    </div>
+  </div>
+
+  <main id="seriesMain" style="display:none;">
+    <!-- Banner Image (shown only when a banner exists) -->
+    <div class="series-banner" id="seriesBanner">
+      <img id="seriesBannerImg" src="" alt="Series Banner">
+    </div>
+
+    <!-- Series Hero -->
+    <section class="series-hero" id="seriesHero">
+      <div class="series-hero-bg" id="seriesHeroBg"></div>
+      <div class="container">
+        <div class="series-hero-content">
+          <div class="series-cover" id="seriesCover">
+            <img src="../images/placeholder.png" alt="Cover" id="coverImage">
+          </div>
+          <div class="series-info">
+            <h1 class="series-title" id="seriesTitle">Loading...</h1>
+            <p class="series-alt-title" id="seriesAltTitle"></p>
+            
+            <div class="series-rating" id="seriesRating">
+              <div class="series-rating-stars">
+                <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i>
+              </div>
+              <span class="series-rating-value" id="ratingValue">0.0</span>
+              <span class="series-rating-count" id="ratingCount">0 ratings</span>
+            </div>
+
+            <!-- View counter — visible to everyone; admins get an Edit button. -->
+            <div class="series-view-count" id="seriesViewCount"
+                 style="display:flex;align-items:center;gap:0.5rem;margin:0.25rem 0 var(--space-md);color:var(--text-secondary);font-size:0.95rem;">
+              <i class="fas fa-eye" style="color:var(--primary);"></i>
+              <span id="viewCountValue" style="font-weight:600;color:var(--text-primary);">0</span>
+              <span style="color:var(--text-muted);font-size:0.8125rem;" id="viewCountLabel">views</span>
+              <button type="button" id="editViewCountBtn" class="btn btn-ghost btn-sm" data-admin-only
+                style="display:none;padding:0.15rem 0.5rem;font-size:0.75rem;" onclick="openEditViewCount()" title="Edit view count (admin only)">
+                <i class="fas fa-pen"></i> Edit
+              </button>
+            </div>
+
+            <!-- Interactive user rating: click a star to rate this series.
+                 Logged-out users get a sign-in toast; logged-in users see
+                 their last rating highlighted and can change it anytime. -->
+            <div class="user-rating" id="userRating" title="Rate this series">
+              <span class="user-rating-label">Your rating:</span>
+              <div class="user-rating-stars" id="userRatingStars" role="radiogroup" aria-label="Your rating">
+                <i class="far fa-star" data-rate="1"></i>
+                <i class="far fa-star" data-rate="2"></i>
+                <i class="far fa-star" data-rate="3"></i>
+                <i class="far fa-star" data-rate="4"></i>
+                <i class="far fa-star" data-rate="5"></i>
+              </div>
+              <span class="user-rating-hint" id="userRatingHint">Not rated</span>
+            </div>
+
+
+            <div class="series-meta-grid" id="seriesMeta">
+              <div class="series-meta-item">
+                <span class="series-meta-label">Status</span>
+                <span class="series-meta-value" id="metaStatus">-</span>
+              </div>
+              <div class="series-meta-item">
+                <span class="series-meta-label">Author</span>
+                <span class="series-meta-value" id="metaAuthor">-</span>
+              </div>
+              <div class="series-meta-item">
+                <span class="series-meta-label">Artist</span>
+                <span class="series-meta-value" id="metaArtist">-</span>
+              </div>
+              <div class="series-meta-item">
+                <span class="series-meta-label">Release Year</span>
+                <span class="series-meta-value" id="metaYear">-</span>
+              </div>
+              <div class="series-meta-item">
+                <span class="series-meta-label">Chapters</span>
+                <span class="series-meta-value" id="metaChapters">-</span>
+              </div>
+              <div class="series-meta-item">
+                <span class="series-meta-label">Genre</span>
+                <span class="series-meta-value" id="metaGenre">-</span>
+              </div>
+            </div>
+
+            <div id="seriesGenres" style="display: flex; gap: var(--space-sm); flex-wrap: wrap; margin-bottom: var(--space-lg);"></div>
+
+            <p class="series-synopsis" id="seriesSynopsis">Loading synopsis...</p>
+
+            <div class="series-actions">
+              <a href="#" class="btn btn-primary btn-lg" id="readFirstBtn">
+                <i class="fas fa-book-open"></i> Read First
+              </a>
+              <a href="#" class="btn btn-secondary btn-lg" id="readLatestBtn">
+                <i class="fas fa-forward"></i> Read Latest
+              </a>
+              <button class="btn btn-outline btn-lg" id="followBtn" onclick="toggleFollow()">
+                <i class="fas fa-plus"></i> <span id="followBtnText">Follow</span>
+              </button>
+              <button class="btn btn-outline btn-lg" id="favoriteBtn" onclick="toggleFavorite()">
+                <i class="far fa-heart"></i> <span id="favoriteBtnText">Favorite</span>
+              </button>
+              <button class="btn btn-ghost btn-lg" onclick="shareSeries()">
+                <i class="fas fa-share-alt"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Chapters Section -->
+    <section class="container" style="margin-top: var(--space-2xl); margin-bottom: var(--space-3xl);">
+      <div class="tabs">
+        <button class="tab active" data-tab="chapters">Chapters</button>
+        <button class="tab" data-tab="featured" id="featuredTabBtn" style="display:none;">Featured</button>
+        <button class="tab" data-tab="reviews">Reviews</button>
+        <button class="tab" data-tab="related">Related Series</button>
+      </div>
+
+      <div class="tab-content active" data-tab-content="chapters">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-lg);">
+          <h3 style="font-size: 1.125rem; font-weight: 600;">Chapter List</h3>
+          <select id="chapterSort" class="form-input" style="width: auto;">
+            <option value="desc">Newest First</option>
+            <option value="asc">Oldest First</option>
+          </select>
+        </div>
+        <div id="chaptersList">
+          <div class="chapter-row"><div class="chapter-row-thumb"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="chapter-row-body"><div class="skeleton" style="width:60%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:30%;height:12px;"></div></div></div>
+          <div class="chapter-row"><div class="chapter-row-thumb"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="chapter-row-body"><div class="skeleton" style="width:60%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:30%;height:12px;"></div></div></div>
+          <div class="chapter-row"><div class="chapter-row-thumb"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="chapter-row-body"><div class="skeleton" style="width:60%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:30%;height:12px;"></div></div></div>
+          <div class="chapter-row"><div class="chapter-row-thumb"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="chapter-row-body"><div class="skeleton" style="width:60%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:30%;height:12px;"></div></div></div>
+          <div class="chapter-row"><div class="chapter-row-thumb"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="chapter-row-body"><div class="skeleton" style="width:60%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:30%;height:12px;"></div></div></div>
+          <div class="chapter-row"><div class="chapter-row-thumb"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="chapter-row-body"><div class="skeleton" style="width:60%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:30%;height:12px;"></div></div></div>
+        </div>
+        <div id="chaptersLoadMore" style="padding: var(--space-xl); text-align: center; display: none;">
+          <div class="spinner" style="margin: 0 auto;"></div>
+        </div>
+      </div>
+
+      <!-- Featured / Custom Section (admin-configurable) -->
+      <div class="tab-content" data-tab-content="featured">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;margin-bottom:var(--space-lg);">
+          <h3 style="font-size:1.125rem;font-weight:600;margin:0;" id="featuredHeading">Featured Manhwa</h3>
+          <button id="featuredEditBtn" type="button" class="btn btn-ghost btn-sm" data-admin-only style="display:none;">
+            <i class="fas fa-pen"></i> Edit Section
+          </button>
+        </div>
+        <div class="series-grid" id="featuredGrid"></div>
+        <p id="featuredEmpty" class="muted" style="display:none;">No featured manhwa yet.</p>
+      </div>
+
+      <!-- Community Reviews tab — populated by js/reviews.js -->
+      <div class="tab-content" data-tab-content="reviews">
+        <div class="review-empty" style="text-align:center;padding:2rem;color:var(--text-muted,#888);">
+          <div class="spinner" style="margin:0 auto;"></div>
+        </div>
+      </div>
+
+      <div class="tab-content" data-tab-content="related">
+        <div class="series-grid" id="relatedGrid">
+          <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div></div></div>
+          <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div></div></div>
+          <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div></div></div>
+          <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Featured Section Admin Editor Modal -->
+    <div id="featuredEditorOverlay" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,0.85);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:1rem;">
+      <div role="dialog" aria-modal="true" style="max-width:680px;width:100%;max-height:90vh;overflow:auto;background:var(--bg-card,#141414);color:var(--text-primary,#fff);border:1px solid var(--border-color,#2a2a2a);border-radius:14px;padding:1.5rem;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+          <h2 style="margin:0;font-size:1.25rem;font-weight:700;">Edit Featured Section</h2>
+          <button type="button" class="icon-btn" id="featuredEditorClose"><i class="fas fa-times"></i></button>
+        </div>
+        <p class="muted" style="margin-top:0;font-size:0.85rem;">Pick series from your library, or paste a manual entry. Drag-free reordering via the arrows.</p>
+        <div style="margin-bottom:1rem;">
+          <label class="form-label">Section Title</label>
+          <input type="text" id="featuredTitleInput" class="form-input" placeholder="Featured Manhwa">
+        </div>
+        <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.5rem;">Preview (drag-free order — use ↑ / ↓ to reorder):</div>
+        <div id="featuredItemsList" style="display:flex;flex-direction:column;gap:0.75rem;"></div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:1rem;">
+          <button type="button" class="btn btn-primary btn-sm" id="featuredPickBtn"><i class="fas fa-list"></i> Select from Library</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="featuredAddBtn"><i class="fas fa-plus"></i> Add Manual Entry</button>
+          <button type="button" class="btn btn-primary" id="featuredSaveBtn" style="margin-left:auto;"><i class="fas fa-save"></i> Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Series Library Picker Modal -->
+    <div id="featuredPickerOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:1rem;">
+      <div role="dialog" aria-modal="true" style="max-width:760px;width:100%;max-height:90vh;display:flex;flex-direction:column;background:var(--bg-card,#141414);color:var(--text-primary,#fff);border:1px solid var(--border-color,#2a2a2a);border-radius:14px;padding:1.25rem;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+          <h2 style="margin:0;font-size:1.15rem;font-weight:700;"><i class="fas fa-list"></i> Select Series</h2>
+          <button type="button" class="icon-btn" id="featuredPickerClose"><i class="fas fa-times"></i></button>
+        </div>
+        <div style="position:relative;margin-bottom:0.75rem;">
+          <i class="fas fa-search" style="position:absolute;left:0.75rem;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:0.85rem;"></i>
+          <input type="search" id="featuredPickerSearch" class="form-input" placeholder="Search your library…" style="padding-left:2.25rem;width:100%;" autocomplete="off">
+        </div>
+        <div id="featuredPickerList" style="flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.75rem;padding:0.25rem;">
+          <p class="muted" style="grid-column:1/-1;text-align:center;padding:1rem;">Loading…</p>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.75rem;gap:0.5rem;flex-wrap:wrap;">
+          <span id="featuredPickerCount" class="muted" style="font-size:0.8rem;"></span>
+          <button type="button" class="btn btn-ghost btn-sm" id="featuredPickerDone">Done</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 404 State -->
+  <div id="notFoundState" style="display:none; min-height: 60vh; display: flex; align-items: center; justify-content: center;">
+    <div class="empty-state">
+      <div class="empty-state-icon"><i class="fas fa-search"></i></div>
+      <h3 class="empty-state-title">Series Not Found</h3>
+      <p class="empty-state-desc">The series you're looking for doesn't exist or has been removed.</p>
+      <a href="browse.html" class="btn btn-primary">Browse Series</a>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-grid" style="grid-template-columns: 1fr; margin-bottom: var(--space-lg);">
+        <div style="text-align: center;">
+          <a href="../index.html" class="logo" style="justify-content: center;">
+            <img src="../images/Y.png" alt="YoruVerse" class="logo-text-img">
+          </a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+      </div>
+    </div>
+  </footer>
+
+  <script src="../js/path-utils.js"></script>
+  <script src="../js/firebase-config.js"></script>
+  <script src="../js/ui.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/db.js"></script>
+  <script src="../js/exp-system.js"></script>
+  <script src="../js/donation.js"></script>
+  <!-- Comments module is loaded here only so Reviews can reuse its
+       shared "Insert Image (URL)" popup. Comments.init() is NOT
+       called on this page, so no chapter-comments UI is mounted. -->
+  <script src="../js/comments.js"></script>
+  <script src="../js/reviews.js"></script>
+  
+  <script>
+    // ==================== SERIES DETAILS LOGIC ====================
+    
+    let currentSeries = null;
+    let seriesId = null;
+    let chaptersCursor = null;
+    let hasMoreChapters = true;
+    let isLoadingChapters = false;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      UI.init();
+
+      // Get series ID from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      seriesId = urlParams.get('id');
+
+      if (!seriesId) {
+        document.getElementById('loadingScreen').classList.add('hidden');
+        document.getElementById('seriesMain').style.display = 'none';
+        document.getElementById('notFoundState').style.display = 'flex';
+        return;
+      }
+
+      try {
+        // Load series details
+        currentSeries = await DB.getSeriesById(seriesId);
+
+        if (!currentSeries) {
+          throw new Error('Series not found');
+        }
+
+        // 18+ Content Warning — must pass before rendering series details
+        if (isAdultSeries(currentSeries)) {
+          const ok = await ensureAdultConsent();
+          if (!ok) {
+            // User chose Go Back — leave the page
+            if (history.length > 1) history.back();
+            else window.location.href = '../index.html';
+            return;
+          }
+        }
+
+        // Update page title
+        document.title = `${currentSeries.title} - YoruVerse`;
+
+        // Render series info
+        renderSeriesDetails(currentSeries);
+
+        // Load chapters
+        loadChapters(true);
+
+        // Wire interactive star rating
+        initUserRating();
+
+
+        // Load related series
+        loadRelatedSeries();
+
+        // Initialize Community Reviews module for this series.
+        try { if (window.Reviews) Reviews.init(seriesId); } catch (e) { console.warn('Reviews init failed', e); }
+
+        // If we were sent here from a report ("Open" button in admin),
+        // jump to the Reviews tab, scroll to the reported review and
+        // briefly highlight it so moderators can find it instantly.
+        try {
+          const highlightReviewId = urlParams.get('reviewId');
+          if (highlightReviewId) {
+            const goToReview = () => {
+              const tabBtn = document.querySelector('.tab[data-tab="reviews"]');
+              if (tabBtn) tabBtn.click();
+              const el = document.querySelector(`.review-item[data-review-id="${CSS.escape(highlightReviewId)}"]`);
+              if (!el) return false;
+              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              el.style.transition = 'box-shadow .4s, background .4s';
+              el.style.boxShadow = '0 0 0 3px #f59e0b';
+              setTimeout(() => { el.style.boxShadow = ''; }, 3500);
+              return true;
+            };
+            // Reviews load is async; poll briefly until the node exists.
+            let tries = 0;
+            const iv = setInterval(() => {
+              if (goToReview() || ++tries > 40) clearInterval(iv);
+            }, 300);
+          }
+        } catch (_) {}
+
+        // Re-render review composer when auth state changes so the
+        // login prompt is replaced with the editor (and vice versa).
+        try {
+          firebase.auth().onAuthStateChanged(() => {
+            if (window.Reviews && Reviews.seriesId) Reviews._renderComposer();
+          });
+        } catch (_) {}
+
+        // Check follow/favorite status
+        checkUserStatus();
+
+        // Increment view count
+        DB.incrementViewCount(seriesId);
+
+        document.getElementById('loadingScreen').classList.add('hidden');
+        document.getElementById('seriesMain').style.display = 'block';
+
+      } catch (error) {
+        console.error('Error loading series:', error);
+        document.getElementById('loadingScreen').classList.add('hidden');
+        document.getElementById('seriesMain').style.display = 'none';
+        document.getElementById('notFoundState').style.display = 'flex';
+      }
+
+      // ---- 18+ Content Warning helpers ----
+      function isAdultSeries(series) {
+        const tags = (series.genres || []).map(g => String(g).toLowerCase().trim());
+        return tags.some(t =>
+          t === '18+' || t === 'adult' || t === 'mature' || t === 'nsfw' ||
+          t === '18plus' || t === 'r18' || t === 'r-18' || t === 'smut' || t === 'ecchi' ||
+          t.includes('18+') || t.includes('adult') || t.includes('mature') || t.includes('nsfw')
+        );
+      }
+
+      function hasValidAdultConsent() {
+        try {
+          const raw = localStorage.getItem('adultContentConsent');
+          if (!raw) return false;
+          const data = JSON.parse(raw);
+          // Consent valid for 7 days
+          const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+          if (!data?.confirmedAt) return false;
+          if (Date.now() - data.confirmedAt > SEVEN_DAYS) return false;
+          return true;
+        } catch (_) { return false; }
+      }
+
+      function ensureAdultConsent() {
+        if (hasValidAdultConsent()) return Promise.resolve(true);
+        return new Promise(resolve => {
+          const overlay = document.getElementById('adultWarningOverlay');
+          const btnContinue = document.getElementById('adultWarningContinue');
+          const btnBack = document.getElementById('adultWarningBack');
+          // Hide spinner while warning is up
+          document.getElementById('loadingScreen').classList.add('hidden');
+          overlay.style.display = 'flex';
+          document.body.style.overflow = 'hidden';
+
+          const cleanup = (result) => {
+            overlay.style.display = 'none';
+            document.body.style.overflow = '';
+            btnContinue.removeEventListener('click', onContinue);
+            btnBack.removeEventListener('click', onBack);
+            resolve(result);
+          };
+          const onContinue = () => {
+            try {
+              localStorage.setItem('adultContentConsent',
+                JSON.stringify({ confirmedAt: Date.now() }));
+            } catch (_) {}
+            cleanup(true);
+          };
+          const onBack = () => cleanup(false);
+          btnContinue.addEventListener('click', onContinue);
+          btnBack.addEventListener('click', onBack);
+        });
+      }
+
+
+      // Tab switching
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+          
+          tab.classList.add('active');
+          const tabName = tab.dataset.tab;
+          document.querySelector(`[data-tab-content="${tabName}"]`).classList.add('active');
+        });
+      });
+
+      // Chapter sort
+      document.getElementById('chapterSort').addEventListener('change', () => {
+        loadChapters(true);
+      });
+
+      // Auto-load remaining chapters when the loader sentinel scrolls into
+      // view. Previously only the first 30 chapters were ever fetched, which
+      // hid Chapter 1 on series with 30+ chapters (the issue from the
+      // screenshot). The IntersectionObserver keeps calling loadChapters
+      // until hasMoreChapters is false, so every chapter is reachable.
+      const loaderEl = document.getElementById('chaptersLoadMore');
+      if (loaderEl && 'IntersectionObserver' in window) {
+        const io = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting && hasMoreChapters && !isLoadingChapters) {
+              loadChapters(false);
+            }
+          });
+        }, { rootMargin: '300px 0px' });
+        io.observe(loaderEl);
+      }
+    });
+
+    function renderSeriesDetails(series) {
+      // Banner image — displayed above the hero when available
+      const bannerUrl = series.bannerImage || series.banner || '';
+      const bannerEl = document.getElementById('seriesBanner');
+      const bannerImg = document.getElementById('seriesBannerImg');
+      if (bannerUrl && bannerEl && bannerImg) {
+        bannerImg.src = bannerUrl;
+        bannerImg.alt = `${series.title} Banner`;
+        bannerEl.style.display = 'block';
+      }
+
+      // Hero background — prefer banner, fall back to cover
+      const heroBg = document.getElementById('seriesHeroBg');
+      const bgUrl = bannerUrl || series.coverImage || '';
+      if (heroBg && bgUrl) {
+        heroBg.style.backgroundImage = `url('${bgUrl}')`;
+      }
+
+      // Cover image
+      document.getElementById('coverImage').src = series.coverImage || '../images/placeholder.png';
+      document.getElementById('coverImage').alt = series.title;
+
+      // Title
+      document.getElementById('seriesTitle').textContent = series.title;
+      
+      // Alt title
+      const altTitle = series.alternativeTitles?.join(', ');
+      document.getElementById('seriesAltTitle').textContent = altTitle || '';
+
+      // Rating
+      const rating = series.rating || 0;
+      const ratingCount = series.ratingCount || 0;
+      document.getElementById('ratingValue').textContent = rating.toFixed(1);
+      document.getElementById('ratingCount').textContent = `${ratingCount} rating${ratingCount !== 1 ? 's' : ''}`;
+
+      // View counter — formatted for readability (1.2k / 3.4M).
+      const vc = Number(series.viewCount || 0);
+      const vcEl = document.getElementById('viewCountValue');
+      const vcLbl = document.getElementById('viewCountLabel');
+      if (vcEl) vcEl.textContent = formatViewCount(vc);
+      if (vcEl) vcEl.title = `${vc.toLocaleString()} total views`;
+      if (vcLbl) vcLbl.textContent = vc === 1 ? 'view' : 'views';
+      // Reveal the admin Edit button only for actual admins (not moderators).
+      maybeShowEditViewCountBtn();
+
+      // Meta info
+      document.getElementById('metaStatus').textContent = series.status || 'Unknown';
+      document.getElementById('metaStatus').className = `series-meta-value status-${(series.status || '').toLowerCase()}`;
+      document.getElementById('metaAuthor').textContent = series.author || 'Unknown';
+      document.getElementById('metaArtist').textContent = series.artist || series.author || 'Unknown';
+      document.getElementById('metaYear').textContent = series.releaseYear || 'Unknown';
+      document.getElementById('metaChapters').textContent = series.latestChapter || '0';
+      document.getElementById('metaGenre').textContent = series.genres?.[0] || 'Unknown';
+
+      // Genres — clickable, link to browse filtered by exact genre name
+      const genresContainer = document.getElementById('seriesGenres');
+      if (genresContainer && series.genres) {
+        genresContainer.innerHTML = series.genres.map(g =>
+          `<a href="browse.html?genre=${encodeURIComponent(g)}" class="genre-tag"><i class="fas fa-tag" style="font-size:0.65rem;opacity:0.7;"></i> ${g}</a>`
+        ).join('');
+      }
+
+      // Synopsis
+      document.getElementById('seriesSynopsis').textContent = series.synopsis || 'No synopsis available.';
+
+      // Read buttons
+      const readFirstBtn = document.getElementById('readFirstBtn');
+      const readLatestBtn = document.getElementById('readLatestBtn');
+      
+      readFirstBtn.href = AppPath.to(`pages/chapter.html?series=${seriesId}&chapter=first`);
+      readLatestBtn.href = AppPath.to(`pages/chapter.html?series=${seriesId}&chapter=latest`);
+    }
+
+    async function loadChapters(reset = false) {
+      if (isLoadingChapters || (!hasMoreChapters && !reset)) return;
+
+      isLoadingChapters = true;
+
+      if (reset) {
+        chaptersCursor = null;
+        hasMoreChapters = true;
+      }
+
+      const sortOrder = document.getElementById('chapterSort').value;
+
+      try {
+        const result = await DB.getChapters(seriesId, {
+          limit: 30,
+          cursor: reset ? null : chaptersCursor
+        });
+
+        chaptersCursor = result.lastCursor;
+        hasMoreChapters = result.hasMore;
+
+        const container = document.getElementById('chaptersList');
+
+        // Sort chapters
+        const chapters = result.chapters.sort((a, b) => {
+          return sortOrder === 'asc'
+            ? a.chapterNumber - b.chapterNumber
+            : b.chapterNumber - a.chapterNumber;
+        });
+
+        // Per-chapter "Read" badges: fetch the set of chapter IDs the
+        // current user has already finished for this series, then pass
+        // it into renderChapterRow so completed chapters show a badge
+        // and a muted style. Guests get an empty set (no badges).
+        const readSet = (typeof DB.getReadChapters === 'function')
+          ? await DB.getReadChapters(seriesId)
+          : new Set();
+
+        if (reset) {
+          if (chapters.length === 0) {
+            container.innerHTML = UI.renderEmptyState('No chapters yet', 'Chapters will be added soon.');
+          } else {
+            container.innerHTML = chapters
+              .map(c => UI.renderChapterRow(c, seriesId, { isRead: readSet.has(c.id) }))
+              .join('');
+          }
+        } else {
+          chapters.forEach(c => {
+            container.insertAdjacentHTML(
+              'beforeend',
+              UI.renderChapterRow(c, seriesId, { isRead: readSet.has(c.id) })
+            );
+          });
+        }
+
+
+        // Read First / Read Latest buttons intentionally use the
+        // special 'first' / 'latest' tokens. chapter.html resolves these
+        // against the FULL chapter list (limit 500, sorted ascending),
+        // so "Read First" always opens Chapter 1 even when this page has
+        // only loaded the most recent 30 chapters into view.
+
+      } catch (error) {
+        console.error('Error loading chapters:', error);
+      } finally {
+        isLoadingChapters = false;
+        // Show/hide the auto-load sentinel so the IntersectionObserver can
+        // keep paging through chapters. When there's no more data we hide
+        // it so the spinner doesn't sit at the bottom forever.
+        const loaderEl = document.getElementById('chaptersLoadMore');
+        if (loaderEl) loaderEl.style.display = hasMoreChapters ? 'block' : 'none';
+      }
+    }
+
+    // ============ INTERACTIVE STAR RATING ============
+    function initUserRating() {
+      const wrap = document.getElementById('userRatingStars');
+      const hint = document.getElementById('userRatingHint');
+      if (!wrap) return;
+      const stars = Array.from(wrap.querySelectorAll('i[data-rate]'));
+      let currentRating = 0;
+
+      const paint = (value) => {
+        stars.forEach((star, idx) => {
+          const filled = idx < value;
+          star.classList.toggle('fas', filled);
+          star.classList.toggle('far', !filled);
+          star.classList.toggle('active', filled);
+        });
+      };
+
+      // Load existing user rating (if logged in)
+      if (auth.currentUser && typeof DB.getUserRating === 'function') {
+        DB.getUserRating(seriesId).then(r => {
+          if (r) {
+            currentRating = r;
+            paint(r);
+            hint.textContent = `You rated this ${r}/5`;
+          }
+        }).catch(() => {});
+      }
+
+      stars.forEach((star, idx) => {
+        star.addEventListener('mouseenter', () => paint(idx + 1));
+        star.addEventListener('mouseleave', () => paint(currentRating));
+        star.addEventListener('click', async () => {
+          if (!auth.currentUser) {
+            showToast('Please sign in to rate this series', 'warning');
+            window.location.href = AppPath.to('pages/login.html');
+            return;
+          }
+          const value = idx + 1;
+          try {
+            await DB.rateSeries(seriesId, value);
+            currentRating = value;
+            paint(value);
+            hint.textContent = `You rated this ${value}/5`;
+            showToast(`Rated ${value}/5 — thanks!`, 'success');
+            // Refresh aggregate display from the latest series doc
+            const fresh = await DB.getSeriesById(seriesId);
+            if (fresh) {
+              document.getElementById('ratingValue').textContent =
+                (fresh.rating || 0).toFixed(1);
+              const c = fresh.ratingCount || 0;
+              document.getElementById('ratingCount').textContent =
+                `${c} rating${c !== 1 ? 's' : ''}`;
+            }
+          } catch (err) {
+            showToast(err.message || 'Failed to save rating', 'error');
+          }
+        });
+      });
+    }
+
+    async function loadRelatedSeries() {
+      const container = document.getElementById('relatedGrid');
+      try {
+        const ownGenres = Array.isArray(currentSeries?.genres)
+          ? currentSeries.genres.filter(Boolean)
+          : [];
+
+        // Query a wide pool across up to the first 3 genres, then score by
+        // genre-overlap with the current series so the most-related titles
+        // surface first. Falls back to popular series if no genres exist.
+        const seenIds = new Set([seriesId]);
+        const pool = [];
+
+        const pickGenres = ownGenres.slice(0, 3);
+        if (pickGenres.length === 0) {
+          // No genres on this series — show popular titles as a soft fallback.
+          const res = await DB.getSeries({ limit: 12, sortBy: 'updatedAt' });
+          (res.series || []).forEach(s => {
+            if (!seenIds.has(s.id)) { seenIds.add(s.id); pool.push(s); }
+          });
+        } else {
+          for (const g of pickGenres) {
+            try {
+              // Use 'updatedAt' — the only sort that is guaranteed to have a
+              // Firestore composite index alongside the genres filter. Sorting
+              // by viewCount without the matching index makes every query
+              // throw, which is why Related Series stayed empty.
+              const res = await DB.getSeries({ genre: g, limit: 20, sortBy: 'updatedAt' });
+              (res.series || []).forEach(s => {
+                if (!seenIds.has(s.id)) { seenIds.add(s.id); pool.push(s); }
+              });
+            } catch (e) { console.warn('related: genre query failed', g, e); }
+          }
+          // Soft fallback: if every genre query failed or returned nothing,
+          // surface recently updated titles so the panel isn't empty.
+          if (pool.length === 0) {
+            try {
+              const res = await DB.getSeries({ limit: 12, sortBy: 'updatedAt' });
+              (res.series || []).forEach(s => {
+                if (!seenIds.has(s.id)) { seenIds.add(s.id); pool.push(s); }
+              });
+            } catch (e) { console.warn('related: fallback query failed', e); }
+          }
+        }
+
+        // Score by number of shared genres (higher = more related), then
+        // by viewCount as a tiebreaker.
+        const ownSet = new Set(ownGenres.map(g => String(g).toLowerCase()));
+        pool.forEach(s => {
+          const sg = (s.genres || []).map(g => String(g).toLowerCase());
+          s._overlap = sg.filter(g => ownSet.has(g)).length;
+        });
+        pool.sort((a, b) => (b._overlap - a._overlap) || ((b.viewCount || 0) - (a.viewCount || 0)));
+
+        const related = pool.slice(0, 12);
+
+        if (related.length === 0) {
+          container.innerHTML = UI.renderEmptyState('No related series', 'Check back later.');
+          return;
+        }
+
+        container.innerHTML = related.map(s => UI.renderSeriesCard(s)).join('');
+        UI.initLazyLoading();
+      } catch (error) {
+        console.error('Error loading related series:', error);
+        if (container) {
+          container.innerHTML = UI.renderEmptyState('No related series', 'Check back later.');
+        }
+      }
+    }
+
+    async function checkUserStatus() {
+      if (!auth.currentUser) return;
+
+      try {
+        const isFav = await DB.isFavorited(seriesId);
+        updateFavoriteButton(isFav);
+
+        const userDoc = await db.collection('users').doc(auth.currentUser.uid).get();
+        const followed = userDoc.data()?.followedSeries || [];
+        updateFollowButton(followed.includes(seriesId));
+      } catch (error) {
+        console.error('Error checking user status:', error);
+      }
+    }
+
+    async function toggleFollow() {
+      if (!(await Auth.requireAuth())) return;
+
+      try {
+        const result = await DB.toggleFollow(seriesId);
+        updateFollowButton(result.following);
+        showToast(result.following ? 'Now following!' : 'Unfollowed', 'success');
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
+    }
+
+    async function toggleFavorite() {
+      if (!(await Auth.requireAuth())) return;
+
+      try {
+        const result = await DB.toggleFavorite(seriesId);
+        updateFavoriteButton(result.favorited);
+        showToast(result.favorited ? 'Added to favorites!' : 'Removed from favorites', 'success');
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
+    }
+
+    function updateFollowButton(isFollowing) {
+      const btn = document.getElementById('followBtn');
+      const text = document.getElementById('followBtnText');
+      
+      btn.innerHTML = isFollowing 
+        ? '<i class="fas fa-check"></i> <span id="followBtnText">Following</span>'
+        : '<i class="fas fa-plus"></i> <span id="followBtnText">Follow</span>';
+      
+      btn.classList.toggle('btn-primary', isFollowing);
+      btn.classList.toggle('btn-outline', !isFollowing);
+    }
+
+    function updateFavoriteButton(isFavorited) {
+      const btn = document.getElementById('favoriteBtn');
+      
+      btn.innerHTML = isFavorited
+        ? '<i class="fas fa-heart"></i> <span id="favoriteBtnText">Favorited</span>'
+        : '<i class="far fa-heart"></i> <span id="favoriteBtnText">Favorite</span>';
+      
+      btn.classList.toggle('btn-primary', isFavorited);
+      btn.classList.toggle('btn-outline', !isFavorited);
+    }
+
+    function shareSeries() {
+      const url = window.location.href;
+      
+      if (navigator.share) {
+        navigator.share({
+          title: currentSeries?.title || 'Check out this series',
+          url: url
+        });
+      } else {
+        navigator.clipboard.writeText(url);
+        showToast('Link copied to clipboard!', 'success');
+      }
+    }
+
+    // ============= VIEW COUNTER HELPERS =============
+    // Compact formatter so big numbers don't push the hero layout around.
+    function formatViewCount(n) {
+      n = Number(n) || 0;
+      if (n < 1000) return String(n);
+      if (n < 1_000_000) return (n / 1000).toFixed(n < 10_000 ? 1 : 0).replace(/\.0$/, '') + 'k';
+      return (n / 1_000_000).toFixed(n < 10_000_000 ? 1 : 0).replace(/\.0$/, '') + 'M';
+    }
+
+    // The hero is rendered before auth state resolves; re-check whenever
+    // it changes so the Edit button shows up for admins immediately on
+    // sign-in and disappears on sign-out.
+    async function maybeShowEditViewCountBtn() {
+      const btn = document.getElementById('editViewCountBtn');
+      if (!btn) return;
+      try {
+        const user = firebase.auth().currentUser;
+        // Strictly admin — moderators view only, per spec.
+        const isAdmin = !!(user && Auth?.userData?.role === 'admin');
+        btn.style.display = isAdmin ? 'inline-flex' : 'none';
+      } catch { btn.style.display = 'none'; }
+    }
+    try {
+      firebase.auth().onAuthStateChanged(() => maybeShowEditViewCountBtn());
+    } catch (_) {}
+
+    // Admin-only manual edit. Server-side rules must enforce this too,
+    // but the UI gate keeps non-admins from even seeing the dialog.
+    async function openEditViewCount() {
+      if (!currentSeries || !seriesId) return;
+      const user = firebase.auth().currentUser;
+      if (!user || Auth?.userData?.role !== 'admin') {
+        showToast('Only admins can edit the view count.', 'error');
+        return;
+      }
+      const current = Number(currentSeries.viewCount || 0);
+      const raw = prompt(`Edit view count for "${currentSeries.title}".\n\nEnter a new total (use +N or -N to adjust):`, String(current));
+      if (raw === null) return;
+      const trimmed = String(raw).trim();
+      if (!trimmed) return;
+
+      let next;
+      if (/^[+-]\d+$/.test(trimmed)) {
+        next = current + parseInt(trimmed, 10);
+      } else if (/^\d+$/.test(trimmed)) {
+        next = parseInt(trimmed, 10);
+      } else {
+        showToast('Please enter a whole number, or +N / -N to adjust.', 'error');
+        return;
+      }
+      if (next < 0) next = 0;
+
+      try {
+        await DB.setViewCount(seriesId, next);
+        currentSeries.viewCount = next;
+        const vcEl = document.getElementById('viewCountValue');
+        const vcLbl = document.getElementById('viewCountLabel');
+        if (vcEl) {
+          vcEl.textContent = formatViewCount(next);
+          vcEl.title = `${next.toLocaleString()} total views`;
+        }
+        if (vcLbl) vcLbl.textContent = next === 1 ? 'view' : 'views';
+        showToast('View count updated.', 'success');
+      } catch (err) {
+        console.error('Failed to update view count:', err);
+        showToast(err?.message || 'Failed to update view count.', 'error');
+      }
+    }
+  </script>
+
+  <!-- Featured / Custom Section logic (admin-configurable) -->
+  <script>
+    (function () {
+      // Per-series Featured Section. Each series has its own config doc so
+      // editing/deleting on one series does NOT affect any other series.
+      function getSeriesIdFromUrl() {
+        try { return new URLSearchParams(window.location.search).get('id') || ''; }
+        catch (_) { return ''; }
+      }
+      var CURRENT_SERIES_ID = getSeriesIdFromUrl();
+      function docIdFor(sid) { return 'featuredSeriesSection__' + sid; }
+      var DOC_REF = function (sid) {
+        var id = sid || CURRENT_SERIES_ID;
+        if (!id) return null;
+        return firebase.firestore().collection('config').doc(docIdFor(id));
+      };
+      var state = { title: 'Featured Manhwa', items: [] };
+      var editorItems = [];
+
+      function escHtml(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g,
+          function (m) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]; });
+      }
+      function escAttr(s) { return escHtml(s); }
+
+      function renderFeatured() {
+        var grid = document.getElementById('featuredGrid');
+        var heading = document.getElementById('featuredHeading');
+        var empty = document.getElementById('featuredEmpty');
+        var tabBtn = document.getElementById('featuredTabBtn');
+        if (!grid) return;
+        if (heading && state.title) heading.textContent = state.title;
+        var items = Array.isArray(state.items) ? state.items.filter(function (i) { return i && (i.cover || i.title); }) : [];
+        if (items.length === 0) {
+          grid.innerHTML = '';
+          if (empty) empty.style.display = '';
+        } else {
+          if (empty) empty.style.display = 'none';
+          grid.innerHTML = items.map(function (it) {
+            var href = it.link || '#';
+            var cover = it.cover || '../images/placeholder.png';
+            var title = it.title || 'Untitled';
+            return '' +
+              '<a href="' + escAttr(href) + '" class="series-card">' +
+                '<div class="series-card-image">' +
+                  '<img src="' + escAttr(cover) + '" alt="' + escAttr(title) + '" loading="lazy" onerror="this.src=\'../images/placeholder.png\'">' +
+                '</div>' +
+                '<div class="series-card-info">' +
+                  '<div class="series-card-title" style="font-weight:600;font-size:0.95rem;">' + escHtml(title) + '</div>' +
+                '</div>' +
+              '</a>';
+          }).join('');
+        }
+        // Show tab only if there's something to show OR user is admin
+        var showTab = items.length > 0 || (window.__featuredIsAdmin === true);
+        if (tabBtn) tabBtn.style.display = showTab ? '' : 'none';
+      }
+
+      async function loadFeatured() {
+        var ref = DOC_REF();
+        if (!ref) { renderFeatured(); return; }
+        try {
+          var snap = await ref.get();
+          if (snap.exists) {
+            var d = snap.data() || {};
+            state.title = d.title || 'Featured Manhwa';
+            state.items = Array.isArray(d.items) ? d.items : [];
+          } else {
+            state.title = 'Featured Manhwa';
+            state.items = [];
+          }
+        } catch (e) {
+          console.warn('[Featured] Could not load:', e.message);
+        }
+        renderFeatured();
+        // Live updates when admin edits
+        try {
+          ref.onSnapshot(function (snap) {
+            if (!snap.exists) { state.items = []; renderFeatured(); return; }
+            var d = snap.data() || {};
+            state.title = d.title || 'Featured Manhwa';
+            state.items = Array.isArray(d.items) ? d.items : [];
+            renderFeatured();
+          });
+        } catch (_) {}
+      }
+
+      // ----- Admin editor -----
+      function openEditor() {
+        document.getElementById('featuredTitleInput').value = state.title || '';
+        editorItems = (state.items || []).map(function (i) {
+          return {
+            seriesId: i.seriesId || '',
+            cover: i.cover || '',
+            title: i.title || '',
+            link: i.link || ''
+          };
+        });
+        renderEditorList();
+        document.getElementById('featuredEditorOverlay').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+      }
+      function closeEditor() {
+        document.getElementById('featuredEditorOverlay').style.display = 'none';
+        document.body.style.overflow = '';
+      }
+      function renderEditorList() {
+        var list = document.getElementById('featuredItemsList');
+        if (editorItems.length === 0) {
+          list.innerHTML = '<p class="muted" style="text-align:center;padding:1rem;border:1px dashed var(--border-color,#2a2a2a);border-radius:8px;">No featured items yet. Click "Select from Library" to add some.</p>';
+          return;
+        }
+        list.innerHTML = editorItems.map(function (it, idx) {
+          var isLast = idx === editorItems.length - 1;
+          return '' +
+            '<div style="display:grid;grid-template-columns:60px 1fr auto;gap:0.5rem;align-items:start;padding:0.5rem;border:1px solid var(--border-color,#2a2a2a);border-radius:8px;">' +
+              '<img src="' + escAttr(it.cover || '../images/placeholder.png') + '" alt="" style="width:60px;height:80px;object-fit:cover;border-radius:6px;background:#222;" onerror="this.src=\'../images/placeholder.png\'">' +
+              '<div style="display:flex;flex-direction:column;gap:0.35rem;min-width:0;">' +
+                '<input type="text" class="form-input" placeholder="Title" data-feat-idx="' + idx + '" data-feat-field="title" value="' + escAttr(it.title) + '">' +
+                '<input type="url"  class="form-input" placeholder="Cover image URL" data-feat-idx="' + idx + '" data-feat-field="cover" value="' + escAttr(it.cover) + '">' +
+                '<input type="url"  class="form-input" placeholder="Link (e.g. series.html?id=...)" data-feat-idx="' + idx + '" data-feat-field="link" value="' + escAttr(it.link) + '">' +
+              '</div>' +
+              '<div style="display:flex;flex-direction:column;gap:0.2rem;">' +
+                '<button type="button" class="btn btn-ghost btn-sm" data-feat-up="' + idx + '" title="Move up" ' + (idx === 0 ? 'disabled style="opacity:0.4;"' : '') + '><i class="fas fa-arrow-up"></i></button>' +
+                '<button type="button" class="btn btn-ghost btn-sm" data-feat-down="' + idx + '" title="Move down" ' + (isLast ? 'disabled style="opacity:0.4;"' : '') + '><i class="fas fa-arrow-down"></i></button>' +
+                '<button type="button" class="btn btn-ghost btn-sm" data-feat-remove="' + idx + '" title="Remove"><i class="fas fa-trash"></i></button>' +
+              '</div>' +
+            '</div>';
+        }).join('');
+        // Wire inputs
+        list.querySelectorAll('input[data-feat-field]').forEach(function (inp) {
+          inp.addEventListener('input', function () {
+            var i = Number(inp.dataset.featIdx);
+            editorItems[i][inp.dataset.featField] = inp.value;
+            if (inp.dataset.featField === 'cover') {
+              var img = list.querySelectorAll('div > img')[i];
+              if (img) img.src = inp.value || '../images/placeholder.png';
+            }
+          });
+        });
+        list.querySelectorAll('[data-feat-remove]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            editorItems.splice(Number(btn.dataset.featRemove), 1);
+            renderEditorList();
+          });
+        });
+        list.querySelectorAll('[data-feat-up]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var i = Number(btn.dataset.featUp);
+            if (i > 0) {
+              var tmp = editorItems[i - 1];
+              editorItems[i - 1] = editorItems[i];
+              editorItems[i] = tmp;
+              renderEditorList();
+            }
+          });
+        });
+        list.querySelectorAll('[data-feat-down]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var i = Number(btn.dataset.featDown);
+            if (i < editorItems.length - 1) {
+              var tmp = editorItems[i + 1];
+              editorItems[i + 1] = editorItems[i];
+              editorItems[i] = tmp;
+              renderEditorList();
+            }
+          });
+        });
+      }
+
+      // -------- Library Picker --------
+      var libraryCache = null;
+      var libraryFilter = '';
+
+      function buildSeriesLink(id) {
+        // Use relative because the editor lives on series.html itself.
+        return 'series.html?id=' + encodeURIComponent(id);
+      }
+      function isItemFeatured(id, link) {
+        return editorItems.some(function (it) {
+          return (it.seriesId && it.seriesId === id) ||
+                 (it.link && (it.link === link || it.link.indexOf('id=' + id) !== -1));
+        });
+      }
+
+      async function loadLibrary() {
+        if (libraryCache) return libraryCache;
+        try {
+          var snap = await firebase.firestore().collection('series')
+            .orderBy('title').get();
+          libraryCache = [];
+          snap.forEach(function (d) {
+            var data = d.data() || {};
+            libraryCache.push({
+              id: d.id,
+              title: data.title || '(untitled)',
+              cover: data.cover || data.coverImage || ''
+            });
+          });
+        } catch (e) {
+          libraryCache = [];
+          console.warn('[Featured] Library load failed:', e.message);
+        }
+        return libraryCache;
+      }
+
+      function renderPickerList() {
+        var listEl = document.getElementById('featuredPickerList');
+        var countEl = document.getElementById('featuredPickerCount');
+        var lib = libraryCache || [];
+        var q = libraryFilter;
+        var filtered = q
+          ? lib.filter(function (s) { return s.title.toLowerCase().indexOf(q) !== -1; })
+          : lib;
+
+        if (countEl) {
+          countEl.textContent = q
+            ? filtered.length + ' of ' + lib.length + ' series'
+            : lib.length + ' series in library';
+        }
+
+        if (filtered.length === 0) {
+          listEl.innerHTML = '<p class="muted" style="grid-column:1/-1;text-align:center;padding:1rem;">' +
+            (lib.length === 0 ? 'No series in library yet.' : 'No series match your search.') + '</p>';
+          return;
+        }
+
+        listEl.innerHTML = filtered.map(function (s) {
+          var link = buildSeriesLink(s.id);
+          var added = isItemFeatured(s.id, link);
+          return '' +
+            '<div class="picker-card" style="background:var(--bg-tertiary,#1a1a1a);border:1px solid var(--border-color,#2a2a2a);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;">' +
+              '<div style="aspect-ratio:2/3;background:#0a0a0a;overflow:hidden;">' +
+                '<img src="' + escAttr(s.cover || '../images/placeholder.png') + '" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;" onerror="this.src=\'../images/placeholder.png\'">' +
+              '</div>' +
+              '<div style="padding:0.5rem 0.6rem;flex:1;display:flex;flex-direction:column;gap:0.4rem;">' +
+                '<div style="font-size:0.85rem;font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" title="' + escAttr(s.title) + '">' + escHtml(s.title) + '</div>' +
+                (added
+                  ? '<button type="button" class="btn btn-ghost btn-sm" disabled style="opacity:0.6;margin-top:auto;"><i class="fas fa-check"></i> Added</button>'
+                  : '<button type="button" class="btn btn-primary btn-sm" data-pick-id="' + escAttr(s.id) + '" style="margin-top:auto;"><i class="fas fa-plus"></i> Add to Featured</button>'
+                ) +
+              '</div>' +
+            '</div>';
+        }).join('');
+
+        listEl.querySelectorAll('[data-pick-id]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var id = btn.dataset.pickId;
+            var s = (libraryCache || []).find(function (x) { return x.id === id; });
+            if (!s) return;
+            editorItems.push({
+              seriesId: s.id,
+              title: s.title,
+              cover: s.cover || '',
+              link: buildSeriesLink(s.id)
+            });
+            renderEditorList();
+            renderPickerList(); // refresh "Added" state
+          });
+        });
+      }
+
+      async function openPicker() {
+        document.getElementById('featuredPickerOverlay').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        var search = document.getElementById('featuredPickerSearch');
+        if (search) { search.value = ''; libraryFilter = ''; }
+        document.getElementById('featuredPickerList').innerHTML =
+          '<p class="muted" style="grid-column:1/-1;text-align:center;padding:1rem;">Loading library…</p>';
+        await loadLibrary();
+        renderPickerList();
+        setTimeout(function () { if (search) search.focus(); }, 50);
+      }
+      function closePicker() {
+        document.getElementById('featuredPickerOverlay').style.display = 'none';
+        document.body.style.overflow = 'hidden'; // editor still open
+      }
+
+      async function saveEditor() {
+        var ref = DOC_REF();
+        if (!ref || !CURRENT_SERIES_ID) {
+          alert('Cannot save: missing series id in URL.');
+          return;
+        }
+        var title = document.getElementById('featuredTitleInput').value.trim() || 'Featured Manhwa';
+        // Build cleaned + de-duplicated items list (dedupe by seriesId, else by link, else by title).
+        var seen = Object.create(null);
+        var items = [];
+        editorItems.forEach(function (i) {
+          var item = {
+            seriesId: (i.seriesId || '').trim(),
+            cover: (i.cover || '').trim(),
+            title: (i.title || '').trim(),
+            link: (i.link || '').trim()
+          };
+          if (!item.cover && !item.title && !item.link) return;
+          var key = item.seriesId
+            ? 'sid:' + item.seriesId
+            : (item.link ? 'lnk:' + item.link : 'ttl:' + item.title.toLowerCase());
+          if (seen[key]) return;
+          seen[key] = true;
+          items.push(item);
+        });
+
+        try {
+          await ref.set({
+            title: title,
+            items: items,
+            seriesId: CURRENT_SERIES_ID,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+
+          // ---- Two-way / reciprocal Featured relationships ----
+          // For every featured item that points at another series in our
+          // library, add THIS series as a featured item on that series's
+          // own Featured Section (if not already present). We only ADD —
+          // removals here do not propagate (per spec: deleting must not
+          // affect other manhwa).
+          try {
+            // Fetch this series's title/cover so the reciprocal entry looks
+            // right on the other side.
+            var meSnap = await firebase.firestore()
+              .collection('series').doc(CURRENT_SERIES_ID).get();
+            var meData = meSnap.exists ? (meSnap.data() || {}) : {};
+            var meEntry = {
+              seriesId: CURRENT_SERIES_ID,
+              title: meData.title || document.title || 'Series',
+              cover: meData.cover || meData.coverImage || '',
+              link: 'series.html?id=' + encodeURIComponent(CURRENT_SERIES_ID)
+            };
+
+            var reciprocalTargets = items.filter(function (it) {
+              return it.seriesId && it.seriesId !== CURRENT_SERIES_ID;
+            });
+
+            await Promise.all(reciprocalTargets.map(async function (it) {
+              try {
+                var otherRef = DOC_REF(it.seriesId);
+                if (!otherRef) return;
+                var otherSnap = await otherRef.get();
+                var otherData = otherSnap.exists ? (otherSnap.data() || {}) : {};
+                var otherItems = Array.isArray(otherData.items) ? otherData.items.slice() : [];
+                var already = otherItems.some(function (x) {
+                  return (x.seriesId && x.seriesId === CURRENT_SERIES_ID) ||
+                         (x.link && x.link.indexOf('id=' + CURRENT_SERIES_ID) !== -1);
+                });
+                if (already) return;
+                otherItems.push(meEntry);
+                await otherRef.set({
+                  title: otherData.title || 'Featured Manhwa',
+                  items: otherItems,
+                  seriesId: it.seriesId,
+                  updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+              } catch (innerErr) {
+                console.warn('[Featured] reciprocal write failed for', it.seriesId, innerErr.message);
+              }
+            }));
+          } catch (recErr) {
+            console.warn('[Featured] reciprocal step failed:', recErr.message);
+          }
+
+          state.title = title;
+          state.items = items;
+          renderFeatured();
+          closeEditor();
+        } catch (e) {
+          alert('Could not save: ' + (e.message || e));
+        }
+      }
+
+      async function wireAdmin() {
+        try {
+          var user = firebase.auth().currentUser;
+          if (!user) {
+            await new Promise(function (resolve) {
+              var stop = firebase.auth().onAuthStateChanged(function (u) { stop(); user = u; resolve(); });
+            });
+          }
+          var isAdmin = false;
+          if (user && typeof Auth !== 'undefined' && typeof Auth.isAdmin === 'function') {
+            isAdmin = await Auth.isAdmin(user.uid);
+          }
+          window.__featuredIsAdmin = !!isAdmin;
+          if (isAdmin) {
+            var btn = document.getElementById('featuredEditBtn');
+            if (btn) {
+              btn.style.display = '';
+              btn.addEventListener('click', openEditor);
+            }
+            var tabBtn = document.getElementById('featuredTabBtn');
+            if (tabBtn) tabBtn.style.display = '';
+          }
+          renderFeatured();
+        } catch (e) { console.warn('[Featured] admin check failed:', e.message); }
+      }
+
+      document.addEventListener('DOMContentLoaded', function () {
+        document.getElementById('featuredEditorClose').addEventListener('click', closeEditor);
+        document.getElementById('featuredEditorOverlay').addEventListener('click', function (e) {
+          if (e.target === e.currentTarget) closeEditor();
+        });
+        document.getElementById('featuredAddBtn').addEventListener('click', function () {
+          editorItems.push({ seriesId: '', cover: '', title: '', link: '' });
+          renderEditorList();
+        });
+        document.getElementById('featuredSaveBtn').addEventListener('click', saveEditor);
+
+        // Library picker wiring
+        var pickBtn = document.getElementById('featuredPickBtn');
+        if (pickBtn) pickBtn.addEventListener('click', openPicker);
+        var pickerClose = document.getElementById('featuredPickerClose');
+        if (pickerClose) pickerClose.addEventListener('click', closePicker);
+        var pickerDone = document.getElementById('featuredPickerDone');
+        if (pickerDone) pickerDone.addEventListener('click', closePicker);
+        var pickerOverlay = document.getElementById('featuredPickerOverlay');
+        if (pickerOverlay) pickerOverlay.addEventListener('click', function (e) {
+          if (e.target === e.currentTarget) closePicker();
+        });
+        var pickerSearch = document.getElementById('featuredPickerSearch');
+        if (pickerSearch) pickerSearch.addEventListener('input', function () {
+          libraryFilter = (pickerSearch.value || '').trim().toLowerCase();
+          renderPickerList();
+        });
+
+        loadFeatured();
+        wireAdmin();
+      });
+    })();
+  </script>
+
+  <script src="../js/shared-header.js"></script>
+</body>
+</html>

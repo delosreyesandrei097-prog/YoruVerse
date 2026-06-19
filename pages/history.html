@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reading History - YoruVerse</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/donation.css">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="icon" type="image/png" href="../images/O.png">
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <div class="loading-screen" id="loadingScreen"><div class="spinner"></div><p>Loading history...</p></div>
+
+  <header class="header">
+    <div class="header-content">
+      <a href="../index.html" class="logo"><img src="../images/Y.png" alt="YoruVerse" class="logo-text-img"></a>
+      <div class="search-bar"><i class="fas fa-search search-icon"></i><input type="text" placeholder="Search..." data-search-input></div>
+      <nav class="nav-links">
+        <a href="../index.html" class="nav-link">Home</a>
+        <a href="browse.html" class="nav-link">Browse</a>
+        <a href="library.html" class="nav-link">Library</a>
+      </nav>
+      <div class="header-actions">
+        <button class="icon-btn" data-theme-toggle><i class="fas fa-moon"></i></button>
+        <a href="profile.html" class="avatar-btn" data-auth-required style="display:none;"><img data-user-avatar src="../images/default-avatar.png" alt="Profile"></a>
+        <a href="login.html" class="btn btn-primary btn-sm" data-auth-guest>Login</a>
+        <button class="icon-btn mobile-menu-btn" data-mobile-menu-btn><i class="fas fa-bars"></i></button>
+      </div>
+    </div>
+  </header>
+
+  <div class="mobile-menu" data-mobile-menu>
+    <div class="mobile-menu-panel">
+      <div class="mobile-menu-header">
+        <a href="../index.html" class="logo"><img src="../images/Y.png" alt="YoruVerse" class="logo-text-img"></a>
+        <button class="icon-btn" data-mobile-menu-close><i class="fas fa-times"></i></button>
+      </div>
+      <div class="mobile-menu-links">
+        <a href="../index.html" class="mobile-menu-link"><i class="fas fa-home"></i> Home</a>
+        <a href="browse.html" class="mobile-menu-link"><i class="fas fa-search"></i> Browse</a>
+        <a href="library.html" class="mobile-menu-link" data-auth-required style="display:none;"><i class="fas fa-bookmark"></i> Library</a>
+        <a href="history.html" class="mobile-menu-link active" data-auth-required><i class="fas fa-history"></i> History</a>
+        <a href="profile.html" class="mobile-menu-link" data-auth-required style="display:none;"><i class="fas fa-user"></i> Profile</a>
+        <a href="settings.html" class="mobile-menu-link" data-auth-required style="display:none;"><i class="fas fa-cog"></i> Settings</a>
+        <a href="admin.html" class="mobile-menu-link" data-admin-only style="display:none;"><i class="fas fa-shield-alt"></i> Admin Dashboard</a>
+        <a href="#" class="mobile-menu-link" data-auth-required style="display:none;" onclick="Auth.logout(); return false;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        <a href="login.html" class="mobile-menu-link" data-auth-guest><i class="fas fa-sign-in-alt"></i> Login</a>
+      </div>
+    </div>
+  </div>
+
+  <main style="padding-top: var(--space-xl);">
+    <div class="container">
+      <div class="section-header">
+        <h1 class="section-title"><div class="section-title-icon"><i class="fas fa-history"></i></div>Reading History</h1>
+        <button class="btn btn-ghost btn-sm" onclick="clearHistory()" id="clearHistoryBtn" style="display:none;"><i class="fas fa-trash-alt"></i> Clear History</button>
+      </div>
+      <div id="historyList">
+        <div class="chapter-row"><div class="chapter-row-left"><div class="skeleton" style="width:48px;height:64px;border-radius:8px;"></div><div><div class="skeleton" style="width:200px;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:120px;height:12px;"></div></div></div></div>
+        <div class="chapter-row"><div class="chapter-row-left"><div class="skeleton" style="width:48px;height:64px;border-radius:8px;"></div><div><div class="skeleton" style="width:200px;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:120px;height:12px;"></div></div></div></div>
+        <div class="chapter-row"><div class="chapter-row-left"><div class="skeleton" style="width:48px;height:64px;border-radius:8px;"></div><div><div class="skeleton" style="width:200px;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:120px;height:12px;"></div></div></div></div>
+        <div class="chapter-row"><div class="chapter-row-left"><div class="skeleton" style="width:48px;height:64px;border-radius:8px;"></div><div><div class="skeleton" style="width:200px;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:120px;height:12px;"></div></div></div></div>
+        <div class="chapter-row"><div class="chapter-row-left"><div class="skeleton" style="width:48px;height:64px;border-radius:8px;"></div><div><div class="skeleton" style="width:200px;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:120px;height:12px;"></div></div></div></div>
+        <div class="chapter-row"><div class="chapter-row-left"><div class="skeleton" style="width:48px;height:64px;border-radius:8px;"></div><div><div class="skeleton" style="width:200px;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:120px;height:12px;"></div></div></div></div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-grid" style="grid-template-columns: 1fr; margin-bottom: var(--space-lg);"><div style="text-align: center;"><a href="../index.html" class="logo" style="justify-content: center;"><img src="../images/Y.png" alt="YoruVerse" class="logo-text-img"></a></div></div>
+    </div>
+  </footer>
+
+  <script src="../js/path-utils.js"></script>
+  <script src="../js/firebase-config.js"></script>
+  <script src="../js/ui.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/db.js"></script>
+
+  <script>
+    UI.init();
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (!(await Auth.requireAuth())) return;
+      setTimeout(() => document.getElementById('loadingScreen').classList.add('hidden'), 500);
+      loadHistory();
+    });
+
+    async function loadHistory() {
+      try {
+        const history = await DB.getHistory();
+        const container = document.getElementById('historyList');
+        
+        if (history.length === 0) {
+          container.innerHTML = UI.renderEmptyState('No Reading History', 'Start reading manhwa to track your progress.', 'fa-history');
+          return;
+        }
+
+        document.getElementById('clearHistoryBtn').style.display = '';
+
+        container.innerHTML = history.map(h => `
+          <a href="chapter.html?series=${h.seriesId}&chapter=${h.chapterId}" class="chapter-row">
+            <div class="chapter-row-left">
+              <img src="${h.series?.coverImage || '../images/placeholder.jpg'}" style="width:48px;height:64px;object-fit:cover;border-radius:8px;flex-shrink:0;">
+              <div class="chapter-row-info">
+                <h4>${h.series?.title || 'Unknown'}</h4>
+                <span>Chapter ${h.chapterNumber} - ${h.readAt?.toDate?.() ? h.readAt.toDate().toLocaleDateString() : 'Recently'}</span>
+              </div>
+            </div>
+            <div class="chapter-row-right">
+              <span class="chapter-row-date"><i class="fas fa-chevron-right" style="color:var(--text-muted);"></i></span>
+            </div>
+          </a>
+        `).join('');
+      } catch (e) { console.error(e); }
+    }
+
+    async function clearHistory() {
+      if (!confirm('Are you sure you want to clear your reading history?')) return;
+      
+      try {
+        await db.collection('users').doc(auth.currentUser.uid).update({
+          readingHistory: []
+        });
+        showToast('History cleared', 'success');
+        loadHistory();
+      } catch (error) {
+        showToast('Failed to clear history', 'error');
+      }
+    }
+  </script>
+  <script src="../js/shared-header.js"></script>
+</body>
+</html>

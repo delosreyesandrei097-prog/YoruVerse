@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Browse - YoruVerse</title>
+  <meta name="description" content="Browse and discover manhwa series. Filter by genre, status, and sort by popularity or recently updated.">
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/donation.css">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="icon" type="image/png" href="../images/O.png">
+  
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <div class="loading-screen" id="loadingScreen">
+    <div class="spinner"></div>
+    <p>Loading...</p>
+  </div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-content">
+      <a href="../index.html" class="logo">
+        <img src="../images/Y.png" alt="YoruVerse" class="logo-text-img">
+      </a>
+      <div class="search-bar">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search manhwa..." id="searchInput" data-search-input>
+      </div>
+      <nav class="nav-links">
+        <a href="../index.html" class="nav-link">Home</a>
+        <a href="browse.html" class="nav-link active">Browse</a>
+        <a href="library.html" class="nav-link" data-auth-required style="display:none;">Library</a>
+      </nav>
+      <div class="header-actions">
+        <button class="icon-btn" data-theme-toggle><i class="fas fa-moon"></i></button>
+        <a href="profile.html" class="avatar-btn" data-auth-required style="display:none;">
+          <img data-user-avatar src="../images/default-avatar.png" alt="Profile">
+        </a>
+        <a href="login.html" class="btn btn-primary btn-sm" data-auth-guest>Login</a>
+        <button class="icon-btn mobile-menu-btn" data-mobile-menu-btn><i class="fas fa-bars"></i></button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Menu -->
+  <div class="mobile-menu" data-mobile-menu>
+    <div class="mobile-menu-panel">
+      <div class="mobile-menu-header">
+        <a href="../index.html" class="logo">
+          <img src="../images/Y.png" alt="YoruVerse" class="logo-text-img">
+        </a>
+        <button class="icon-btn" data-mobile-menu-close><i class="fas fa-times"></i></button>
+      </div>
+      <div class="mobile-menu-links">
+        <a href="../index.html" class="mobile-menu-link"><i class="fas fa-home"></i> Home</a>
+        <a href="browse.html" class="mobile-menu-link active"><i class="fas fa-search"></i> Browse</a>
+        <a href="library.html" class="mobile-menu-link" data-auth-required style="display:none;"><i class="fas fa-bookmark"></i> Library</a>
+        <a href="profile.html" class="mobile-menu-link" data-auth-required style="display:none;"><i class="fas fa-user"></i> Profile</a>
+        <a href="about.html" class="mobile-menu-link"><i class="fas fa-info-circle"></i> About</a>
+        <a href="#" class="mobile-menu-link" data-auth-required style="display:none;" onclick="Auth.logout(); return false;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        <a href="login.html" class="mobile-menu-link" data-auth-guest><i class="fas fa-sign-in-alt"></i> Login</a>
+      </div>
+    </div>
+  </div>
+
+  <main style="padding-top: var(--space-xl);">
+    <div class="container">
+      <div class="section-header">
+        <h1 class="section-title" style="font-size: 1.5rem;">
+          <div class="section-title-icon"><i class="fas fa-search"></i></div>
+          Browse Series
+        </h1>
+        <span id="resultCount" style="color: var(--text-muted); font-size: 0.875rem;"></span>
+      </div>
+
+      <!-- Filters (sticky, responsive toolbar) -->
+      <div class="browse-toolbar" role="region" aria-label="Filter series">
+        <select id="genreFilter" class="form-input" aria-label="Filter by genre">
+          <option value="">All Genres</option>
+        </select>
+        <select id="creatorFilter" class="form-input" aria-label="Filter by creator">
+          <option value="">All Creators</option>
+        </select>
+        <select id="statusFilter" class="form-input" aria-label="Filter by status">
+          <option value="">All Status</option>
+          <option value="Ongoing">Ongoing</option>
+          <option value="Completed">Completed</option>
+          <option value="Hiatus">Hiatus</option>
+          <option value="Dropped">Dropped</option>
+        </select>
+        <select id="sortFilter" class="form-input" aria-label="Sort">
+          <option value="updatedAt">Recently Updated</option>
+          <option value="createdAt">Newest</option>
+          <option value="title">Title (A-Z)</option>
+          <option value="rating">Highest Rated</option>
+        </select>
+      </div>
+
+
+      <!-- Series Grid -->
+      <div class="series-grid" id="browseGrid">
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+        <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;margin-bottom:8px;"></div><div class="skeleton" style="width:50%;height:12px;"></div></div></div>
+      </div>
+
+      <!-- Load More Trigger -->
+      <div id="loadMoreTrigger" style="padding: var(--space-xl); text-align: center;">
+        <div class="spinner" style="margin: 0 auto;"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-grid" style="grid-template-columns: 1fr; margin-bottom: var(--space-lg);">
+        <div style="text-align: center;">
+          <a href="../index.html" class="logo" style="justify-content: center; margin-bottom: var(--space-sm);">
+            <img src="../images/Y.png" alt="YoruVerse" class="logo-text-img">
+          </a>
+          <p class="footer-brand-desc" style="max-width: 640px; margin: 0 auto;">&copy; 2026 YoruVerse does not store any files on its servers. It only links to media hosted on third-party services. All content and trademarks are the property of their respective owners.</p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+      </div>
+    </div>
+  </footer>
+
+  <script src="../js/path-utils.js"></script>
+  <script src="../js/firebase-config.js"></script>
+  <script src="../js/ui.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/db.js"></script>
+  
+  <script>
+    // ==================== BROWSE PAGE LOGIC ====================
+    
+    let currentCursor = null;
+    let hasMore = true;
+    let isLoading = false;
+    let currentFilters = {};
+    let infiniteScrollObserver = null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      UI.init();
+      
+      setTimeout(() => {
+        document.getElementById('loadingScreen').classList.add('hidden');
+      }, 500);
+
+      // Parse URL params
+      const urlParams = new URLSearchParams(window.location.search);
+      const searchQuery = urlParams.get('q');
+      const genreParam = urlParams.get('genre');
+      const sortParam = urlParams.get('sort');
+      const creatorParam = urlParams.get('creator');
+
+      if (searchQuery) {
+        document.getElementById('searchInput').value = searchQuery;
+        currentFilters.search = searchQuery;
+      }
+
+      // Load genres + creators for filters (in parallel)
+      await Promise.all([loadGenreOptions(), loadCreatorOptions()]);
+
+      if (genreParam) {
+        document.getElementById('genreFilter').value = genreParam;
+        currentFilters.genre = genreParam;
+      }
+
+      if (creatorParam) {
+        const creatorSel = document.getElementById('creatorFilter');
+        // Ensure option exists even if not in pool
+        if (!Array.from(creatorSel.options).some(o => o.value === creatorParam)) {
+          const opt = document.createElement('option');
+          opt.value = creatorParam;
+          opt.textContent = creatorParam;
+          creatorSel.appendChild(opt);
+        }
+        creatorSel.value = creatorParam;
+        currentFilters.creator = creatorParam;
+      }
+
+      // Set sort filter
+      if (sortParam) {
+        const sortMap = { trending: 'viewCount', newest: 'createdAt', updated: 'updatedAt', popular: 'viewCount' };
+        document.getElementById('sortFilter').value = sortMap[sortParam] || 'updatedAt';
+      }
+
+      // Initial load
+      loadSeries(true);
+
+      // Setup infinite scroll
+      setupInfiniteScroll();
+
+      // Filter change handlers
+      document.getElementById('genreFilter').addEventListener('change', (e) => {
+        currentFilters.genre = e.target.value;
+        loadSeries(true);
+      });
+
+      document.getElementById('creatorFilter').addEventListener('change', (e) => {
+        currentFilters.creator = e.target.value;
+        loadSeries(true);
+      });
+
+      document.getElementById('statusFilter').addEventListener('change', (e) => {
+        currentFilters.status = e.target.value;
+        loadSeries(true);
+      });
+
+      document.getElementById('sortFilter').addEventListener('change', (e) => {
+        loadSeries(true);
+      });
+
+      // Search input
+      const searchInput = document.getElementById('searchInput');
+      let debounceTimer;
+      searchInput.addEventListener('input', (e) => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          currentFilters.search = e.target.value.trim();
+          loadSeries(true);
+        }, 80);
+      });
+    });
+
+    async function loadGenreOptions() {
+      try {
+        const genres = await DB.getGenres();
+        const select = document.getElementById('genreFilter');
+        // Use genre NAME as option value so the Firestore array-contains
+        // query matches exactly how genres are stored on series documents.
+        select.innerHTML = '<option value="">All Genres</option>' +
+          genres.map(g => `<option value="${g.name}">${g.name}</option>`).join('');
+      } catch (error) {
+        console.error('Error loading genres:', error);
+      }
+    }
+
+    async function loadCreatorOptions() {
+      try {
+        // Pull a sizeable pool of series and extract unique creators
+        // (authors + artists). This is client-side because Firestore can't
+        // distinct-aggregate without an index.
+        const result = await DB.getSeries({
+          limit: 500,
+          sortBy: 'updatedAt',
+          sortOrder: 'desc'
+        });
+        const creators = new Set();
+        (result.series || []).forEach(s => {
+          if (s.author && s.author.trim()) creators.add(s.author.trim());
+          if (s.artist && s.artist.trim()) creators.add(s.artist.trim());
+        });
+        const sorted = Array.from(creators).sort((a, b) => a.localeCompare(b));
+        const select = document.getElementById('creatorFilter');
+        const escape = (v) => String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        select.innerHTML = '<option value="">All Creators</option>' +
+          sorted.map(c => `<option value="${escape(c)}">${escape(c)}</option>`).join('');
+      } catch (error) {
+        console.error('Error loading creators:', error);
+      }
+    }
+
+    async function loadSeries(reset = false) {
+      if (isLoading) return;
+      isLoading = true;
+
+      if (reset) {
+        currentCursor = null;
+        hasMore = true;
+      }
+
+      if (!hasMore && !reset) {
+        isLoading = false;
+        return;
+      }
+
+      const sortFilter = document.getElementById('sortFilter').value;
+      const statusFilter = document.getElementById('statusFilter').value;
+      const genreFilter = document.getElementById('genreFilter').value;
+      const creatorFilter = document.getElementById('creatorFilter').value;
+
+      // When filtering by creator we need a larger pool because the filter
+      // is applied client-side (creator can be author OR artist).
+      const usingCreator = !!creatorFilter;
+
+      try {
+        const result = await DB.getSeries({
+          limit: usingCreator ? 200 : 20,
+          cursor: reset ? null : currentCursor,
+          sortBy: sortFilter || 'updatedAt',
+          sortOrder: sortFilter === 'title' ? 'asc' : 'desc',
+          genre: genreFilter || null,
+          status: statusFilter || null,
+          search: currentFilters.search || null
+        });
+
+        // Client-side creator filter (matches author or artist exactly)
+        if (usingCreator && result.series) {
+          result.series = result.series.filter(s =>
+            (s.author && s.author.trim() === creatorFilter) ||
+            (s.artist && s.artist.trim() === creatorFilter)
+          );
+          // Disable pagination when creator filter is active (pool already large)
+          result.hasMore = false;
+          result.lastCursor = null;
+        }
+
+        currentCursor = result.lastCursor;
+        hasMore = result.hasMore;
+
+        const container = document.getElementById('browseGrid');
+        
+        if (reset) {
+          if (result.series.length === 0) {
+            container.innerHTML = UI.renderEmptyState(
+              'No series found',
+              'Try adjusting your filters or search query.'
+            );
+          } else {
+            container.innerHTML = result.series.map(s => UI.renderSeriesCard(s)).join('');
+          }
+        } else {
+          result.series.forEach(s => {
+            container.insertAdjacentHTML('beforeend', UI.renderSeriesCard(s));
+          });
+        }
+
+        // Update count
+        const countEl = document.getElementById('resultCount');
+        if (countEl) {
+          const currentCount = container.querySelectorAll('.series-card').length;
+          countEl.textContent = `${currentCount} series`;
+        }
+
+        UI.initLazyLoading();
+
+      } catch (error) {
+        console.error('Error loading series:', error);
+      } finally {
+        isLoading = false;
+      }
+    }
+
+    function setupInfiniteScroll() {
+      const trigger = document.getElementById('loadMoreTrigger');
+      if (!trigger) return;
+
+      infiniteScrollObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting && !isLoading && hasMore) {
+            loadSeries(false);
+          }
+        });
+      }, { rootMargin: '200px' });
+
+      infiniteScrollObserver.observe(trigger);
+    }
+  </script>
+  <script src="../js/shared-header.js"></script>
+</body>
+</html>

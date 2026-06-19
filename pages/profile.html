@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile - YoruVerse</title>
+  <meta name="description" content="Your YoruVerse profile.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/exp.css">
+  <link rel="stylesheet" href="../css/donation.css">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="icon" type="image/png" href="../images/O.png">
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <div class="loading-screen" id="loadingScreen"><div class="spinner"></div><p>Loading profile...</p></div>
+
+  <header class="header">
+    <div class="header-content">
+      <a href="../index.html" class="logo"><img src="../images/Y.png" alt="YoruVerse" class="logo-text-img"></a>
+      <div class="search-bar"><i class="fas fa-search search-icon"></i><input type="text" placeholder="Search..." data-search-input></div>
+      <nav class="nav-links">
+        <a href="../index.html" class="nav-link">Home</a>
+        <a href="browse.html" class="nav-link">Browse</a>
+        <a href="library.html" class="nav-link">Library</a>
+      </nav>
+      <div class="header-actions">
+        <button class="icon-btn" data-theme-toggle><i class="fas fa-moon"></i></button>
+        <a href="profile.html" class="avatar-btn" data-auth-required style="display:none;"><img data-user-avatar src="../images/default-avatar.png" alt="Profile"></a>
+        <a href="login.html" class="btn btn-primary btn-sm" data-auth-guest>Login</a>
+        <button class="icon-btn mobile-menu-btn" data-mobile-menu-btn><i class="fas fa-bars"></i></button>
+      </div>
+    </div>
+  </header>
+
+  <div class="mobile-menu" data-mobile-menu>
+    <div class="mobile-menu-panel">
+      <div class="mobile-menu-header">
+        <a href="../index.html" class="logo"><img src="../images/Y.png" alt="YoruVerse" class="logo-text-img"></a>
+        <button class="icon-btn" data-mobile-menu-close><i class="fas fa-times"></i></button>
+      </div>
+      <div class="mobile-menu-links">
+        <a href="../index.html" class="mobile-menu-link"><i class="fas fa-home"></i> Home</a>
+        <a href="browse.html" class="mobile-menu-link"><i class="fas fa-search"></i> Browse</a>
+        <a href="library.html" class="mobile-menu-link" data-auth-required style="display:none;"><i class="fas fa-bookmark"></i> Library</a>
+        <a href="history.html" class="mobile-menu-link" data-auth-required style="display:none;"><i class="fas fa-history"></i> History</a>
+        <a href="profile.html" class="mobile-menu-link active" data-auth-required><i class="fas fa-user"></i> Profile</a>
+        <a href="settings.html" class="mobile-menu-link" data-auth-required style="display:none;"><i class="fas fa-cog"></i> Settings</a>
+        <a href="admin.html" class="mobile-menu-link" data-admin-only style="display:none;"><i class="fas fa-shield-alt"></i> Admin Dashboard</a>
+        <a href="#" class="mobile-menu-link" data-auth-required style="display:none;" onclick="Auth.logout(); return false;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        <a href="login.html" class="mobile-menu-link" data-auth-guest><i class="fas fa-sign-in-alt"></i> Login</a>
+      </div>
+    </div>
+  </div>
+
+  <main style="padding-top: var(--space-xl);">
+    <div class="container">
+      <!-- Profile Header -->
+      <div class="profile-cover" id="profileCover"></div>
+      <div class="profile-header profile-header--with-cover">
+        <div class="profile-avatar">
+          <img data-user-avatar src="../images/default-avatar.png" alt="Profile" id="profileAvatar">
+        </div>
+        <h1 class="profile-name" data-user-name>User <span id="profileRoleBadge"></span> <span id="profileLevelBadge"></span> <span id="profileTitleBadge"></span></h1>
+        <p class="profile-email" id="profileEmail">user@example.com</p>
+        <div class="profile-bio" id="profileBio"></div>
+
+        <!-- EXP progress -->
+        <div style="max-width:420px;margin:var(--space-md) auto 0;">
+          <div class="exp-bar"><div class="exp-bar__fill" id="expBarFill" style="width:0%"></div></div>
+          <div class="exp-bar__label"><span id="expBarLevel">Level 1</span><span id="expBarText">0 / 100 XP</span></div>
+          <div style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;">
+            <i class="fas fa-fire" style="color:#f97316;"></i>
+            <span id="streakText">0-day streak</span> ·
+            <span id="chaptersReadText">0 chapters read</span>
+          </div>
+        </div>
+
+        <div class="profile-stats">
+          <div class="profile-stat">
+            <div class="profile-stat-value" id="statFavorites">0</div>
+            <div class="profile-stat-label">Favorites</div>
+          </div>
+          <div class="profile-stat">
+            <div class="profile-stat-value" id="statFollowing">0</div>
+            <div class="profile-stat-label">Following</div>
+          </div>
+          <div class="profile-stat">
+            <div class="profile-stat-value" id="statRead">0</div>
+            <div class="profile-stat-label">Read</div>
+          </div>
+        </div>
+        <div style="margin-top: var(--space-lg);">
+          <a href="settings.html" class="btn btn-secondary"><i class="fas fa-cog"></i> Edit Profile</a>
+          <a href="leaderboard.html" class="btn btn-outline" style="margin-left: var(--space-sm);"><i class="fas fa-trophy"></i> Leaderboard</a>
+          <button class="btn btn-outline" onclick="Auth.logout()" style="margin-left: var(--space-sm);"><i class="fas fa-sign-out-alt"></i> Logout</button>
+        </div>
+      </div>
+
+      <!-- Titles -->
+      <div style="margin-top: var(--space-2xl);">
+        <h2 style="margin-bottom:8px;"><i class="fas fa-medal"></i> Titles</h2>
+        <p style="color:var(--text-muted);font-size:0.85rem;">Pick the title that appears next to your name on comments.</p>
+        <div id="titlesGrid" class="titles-grid"></div>
+      </div>
+
+      <!-- Recent Activity Tabs -->
+      <div class="tabs" style="margin-top: var(--space-2xl);">
+        <button class="tab active" data-tab="favorites">Favorites</button>
+        <button class="tab" data-tab="history">Recent History</button>
+        <button class="tab" data-tab="following">Following</button>
+      </div>
+
+      <div class="tab-content active" data-tab-content="favorites">
+        <div class="series-grid" id="profileFavorites">
+          <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;"></div></div></div>
+          <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;"></div></div></div>
+          <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;"></div></div></div>
+          <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;"></div></div></div>
+        </div>
+      </div>
+
+      <div class="tab-content" data-tab-content="history">
+        <div id="profileHistory">
+          <div class="chapter-row"><div class="chapter-row-left"><div class="skeleton" style="width:48px;height:48px;border-radius:10px;"></div><div><div class="skeleton" style="width:200px;height:16px;margin-bottom:8px;"></div></div></div></div>
+          <div class="chapter-row"><div class="chapter-row-left"><div class="skeleton" style="width:48px;height:48px;border-radius:10px;"></div><div><div class="skeleton" style="width:200px;height:16px;margin-bottom:8px;"></div></div></div></div>
+          <div class="chapter-row"><div class="chapter-row-left"><div class="skeleton" style="width:48px;height:48px;border-radius:10px;"></div><div><div class="skeleton" style="width:200px;height:16px;margin-bottom:8px;"></div></div></div></div>
+          <div class="chapter-row"><div class="chapter-row-left"><div class="skeleton" style="width:48px;height:48px;border-radius:10px;"></div><div><div class="skeleton" style="width:200px;height:16px;margin-bottom:8px;"></div></div></div></div>
+          <div class="chapter-row"><div class="chapter-row-left"><div class="skeleton" style="width:48px;height:48px;border-radius:10px;"></div><div><div class="skeleton" style="width:200px;height:16px;margin-bottom:8px;"></div></div></div></div>
+        </div>
+      </div>
+
+      <div class="tab-content" data-tab-content="following">
+        <div class="series-grid" id="profileFollowing">
+          <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;"></div></div></div>
+          <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;"></div></div></div>
+          <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;"></div></div></div>
+          <div class="series-card"><div class="series-card-image"><div class="skeleton" style="width:100%;height:100%;"></div></div><div class="series-card-info"><div class="skeleton" style="width:80%;height:16px;"></div></div></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-grid" style="grid-template-columns: 1fr; margin-bottom: var(--space-lg);"><div style="text-align: center;"><a href="../index.html" class="logo" style="justify-content: center;"><img src="../images/Y.png" alt="YoruVerse" class="logo-text-img"></a></div></div>
+    </div>
+  </footer>
+
+  <script src="../js/path-utils.js"></script>
+  <script src="../js/firebase-config.js"></script>
+  <script src="../js/ui.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/db.js"></script>
+  <script src="../js/exp-system.js"></script>
+
+  <script>
+    UI.init();
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (!(await Auth.requireAuth())) return;
+
+      setTimeout(() => document.getElementById('loadingScreen').classList.add('hidden'), 500);
+
+      const user = auth.currentUser;
+      const userData = await db.collection('users').doc(user.uid).get().then(d => d.data());
+
+      document.getElementById('profileEmail').textContent = user.email;
+      if (userData?.avatar) document.getElementById('profileAvatar').src = userData.avatar;
+      if (userData?.coverImage) {
+        const cov = document.getElementById('profileCover');
+        cov.style.backgroundImage = `url('${String(userData.coverImage).replace(/'/g,"\\'")}')`;
+        const cx = Number.isFinite(userData.coverPositionX) ? userData.coverPositionX : 50;
+        const cy = Number.isFinite(userData.coverPositionY) ? userData.coverPositionY : 50;
+        cov.style.backgroundPosition = `${cx}% ${cy}%`;
+        cov.style.backgroundSize = 'cover';
+        cov.style.backgroundRepeat = 'no-repeat';
+      }
+      const bioEl = document.getElementById('profileBio');
+      if (bioEl) bioEl.textContent = userData?.bio || '';
+      const nameEl = document.querySelector('.profile-name');
+      if (userData?.username) {
+        nameEl.childNodes[0].nodeValue = userData.username + ' ';
+      }
+
+      // Stats
+      document.getElementById('statFavorites').textContent = userData?.favorites?.length || 0;
+      document.getElementById('statFollowing').textContent = userData?.followedSeries?.length || 0;
+      document.getElementById('statRead').textContent = userData?.readingHistory?.length || 0;
+
+      // EXP / Level / Titles
+      renderExpSection(userData || {});
+      renderTitlesGrid(userData || {});
+
+      // Load favorites
+      loadFavorites();
+      loadHistory();
+      loadFollowing();
+
+      // Tabs
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+          tab.classList.add('active');
+          document.querySelector(`[data-tab-content="${tab.dataset.tab}"]`).classList.add('active');
+        });
+      });
+    });
+
+    async function loadFavorites() {
+      try {
+        const favorites = await DB.getFavorites();
+        const container = document.getElementById('profileFavorites');
+        if (favorites.length === 0) {
+          container.innerHTML = UI.renderEmptyState('No favorites', 'Series you favorite will appear here.', 'fa-heart');
+        } else {
+          container.innerHTML = favorites.map(s => UI.renderSeriesCard(s)).join('');
+          UI.initLazyLoading();
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    async function loadHistory() {
+      try {
+        const history = await DB.getHistory();
+        const container = document.getElementById('profileHistory');
+        if (history.length === 0) {
+          container.innerHTML = UI.renderEmptyState('No history', 'Start reading to track your progress.', 'fa-history');
+        } else {
+          container.innerHTML = history.map(h => `
+            <a href="chapter.html?series=${h.seriesId}&chapter=${h.chapterId}" class="chapter-row">
+              <div class="chapter-row-left">
+                <img src="${h.series?.coverImage || '../images/placeholder.jpg'}" style="width:48px;height:64px;object-fit:cover;border-radius:8px;">
+                <div class="chapter-row-info">
+                  <h4>${h.series?.title || 'Unknown'}</h4>
+                  <span>Chapter ${h.chapterNumber}</span>
+                </div>
+              </div>
+              <div class="chapter-row-right">
+                <span class="chapter-row-date">${h.readAt?.toDate?.() ? h.readAt.toDate().toLocaleDateString() : ''}</span>
+              </div>
+            </a>
+          `).join('');
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    async function loadFollowing() {
+      try {
+        const userDoc = await db.collection('users').doc(auth.currentUser.uid).get();
+        const followedIds = userDoc.data()?.followedSeries || [];
+        
+        const container = document.getElementById('profileFollowing');
+        if (followedIds.length === 0) {
+          container.innerHTML = UI.renderEmptyState('Not following anyone', 'Follow series to get updates.', 'fa-bookmark');
+          return;
+        }
+
+        const series = [];
+        for (const id of followedIds.slice(0, 20)) {
+          const doc = await db.collection('series').doc(id).get();
+          if (doc.exists) series.push({ id: doc.id, ...doc.data() });
+        }
+
+        container.innerHTML = series.map(s => UI.renderSeriesCard(s)).join('');
+        UI.initLazyLoading();
+      } catch (e) { console.error(e); }
+    }
+    function renderExpSection(d) {
+      const exp = d.exp || 0;
+      const p = EXPSystem.progressForExp(exp);
+      document.getElementById('expBarFill').style.width = p.percent + '%';
+      document.getElementById('expBarLevel').textContent = `Level ${p.level}`;
+      document.getElementById('expBarText').textContent = `${p.intoLevel} / ${p.neededForNext} XP`;
+      document.getElementById('streakText').textContent = `${d.dailyStreak || 0}-day streak`;
+      document.getElementById('chaptersReadText').textContent = `${d.chaptersReadCount || (d.readingHistory?.length || 0)} chapters read`;
+      document.getElementById('profileLevelBadge').innerHTML = EXPSystem.renderLevelBadge(p.level);
+      document.getElementById('profileTitleBadge').innerHTML = d.selectedTitleId ? EXPSystem.renderTitleBadge(d.selectedTitleId) : '';
+      const roleEl = document.getElementById('profileRoleBadge');
+      if (roleEl) roleEl.innerHTML = EXPSystem.renderRoleBadge ? EXPSystem.renderRoleBadge(d.role) : '';
+    }
+
+    function renderTitlesGrid(d) {
+      const unlocked = new Set(d.unlockedTitleIds || []);
+      const selected = d.selectedTitleId || null;
+      const customTitles = d.customTitles || {};
+      const now = Date.now();
+      const grid = document.getElementById('titlesGrid');
+      grid.innerHTML = EXPSystem.TITLES.map(t => {
+        // DONATOR is admin-granted only: it must be unlocked AND its custom
+        // title entry must still be active (not expired). This guarantees
+        // users who don't have it can't select or use it.
+        let isUnlocked = unlocked.has(t.id);
+        let cond = '';
+        let extraMeta = '';
+        if (t.unlock.adminGranted) {
+          const entry = customTitles[t.id] || {};
+          const expMs = entry.expiresAt?.toMillis?.() ?? entry.expiresAt ?? null;
+          const active = entry.active === true && (!expMs || expMs > now);
+          isUnlocked = isUnlocked && active;
+          cond = 'Granted by an admin';
+          if (isUnlocked && expMs) {
+            extraMeta = ` <span style="color:var(--text-muted);font-size:0.78rem;">(until ${new Date(expMs).toLocaleDateString()})</span>`;
+          }
+        } else {
+          cond = t.unlock.level ? `Reach Level ${t.unlock.level}`
+               : t.unlock.chapters ? `Read ${t.unlock.chapters} chapters`
+               : t.unlock.streak ? `${t.unlock.streak}-day reading streak` : '';
+        }
+        const isSelected = selected === t.id;
+        return `
+          <div class="title-card ${isUnlocked ? '' : 'locked'} ${isSelected ? 'selected' : ''}">
+            <div>${EXPSystem.renderTitleBadge(t.id)}</div>
+            <div class="title-card__meta">${isUnlocked ? '<i class="fas fa-check"></i> Unlocked' + extraMeta : '<i class="fas fa-lock"></i> ' + cond}</div>
+            <button class="title-card__btn" ${isUnlocked ? '' : 'disabled'} onclick="selectTitle('${t.id}')">
+              ${isSelected ? 'Selected' : (isUnlocked ? 'Use this title' : 'Locked')}
+            </button>
+          </div>`;
+      }).join('') + `
+        <div class="title-card">
+          <div><span class="exp-title exp-title--plain">None</span></div>
+          <div class="title-card__meta">No title shown on comments</div>
+          <button class="title-card__btn" onclick="selectTitle('')">${selected ? 'Use this' : 'Selected'}</button>
+        </div>`;
+    }
+
+    async function selectTitle(id) {
+      try {
+        await EXPSystem.setSelectedTitle(id || null);
+        showToast(id ? 'Title updated' : 'Title cleared', 'success');
+        const snap = await db.collection('users').doc(auth.currentUser.uid).get();
+        const data = snap.data() || {};
+        renderTitlesGrid(data);
+        renderExpSection(data);
+      } catch (e) { showToast(e.message || 'Failed', 'error'); }
+    }
+  </script>
+  <script src="../js/shared-header.js"></script>
+</body>
+</html>

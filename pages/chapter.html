@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reading Chapter - YoruVerse</title>
+  <meta name="description" content="Read manhwa chapters online.">
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+ <link rel="stylesheet" href="../css/main.css">
+ <link rel="stylesheet" href="../css/exp.css">
+  <link rel="stylesheet" href="../css/donation.css">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="icon" type="image/png" href="../images/O.png">
+  
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+  <style>
+    /* ---- Remove blue tap / selection effects in the reader ---- */
+    html, body {
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+    }
+    #chapterImages,
+    #chapterImages * {
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+    }
+    #chapterImages img { -webkit-user-drag: none; user-drag: none; pointer-events: none; }
+    .reader-fab button,
+    .reader-fab button:focus,
+    .reader-fab button:focus-visible { outline: none; -webkit-tap-highlight-color: transparent; }
+
+    /* ---- Reader UI toggle (tap-to-show/hide) ----
+       Force the site header AND the reader (chapter-selector) header to
+       behave as fixed bars at the very top so they slide in/out together
+       with the floating controls. */
+    .header,
+    .reader-header {
+      position: fixed !important;
+      left: 0;
+      right: 0;
+      z-index: 1400;
+      transition: transform 0.28s ease, opacity 0.28s ease;
+      will-change: transform, opacity;
+    }
+    .header { top: 0; }
+    .reader-header { top: var(--header-height, 60px); }
+
+    /* Push page content down so the two stacked fixed bars don't overlap it. */
+    body { padding-top: calc(var(--header-height, 60px) + 64px); }
+
+    body.reader-ui-hidden .header,
+    body.reader-ui-hidden .reader-header {
+      transform: translateY(-110%);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* ---- Floating reader controls (bottom-right) ---- */
+    .reader-fab {
+      position: fixed;
+      right: max(1rem, env(safe-area-inset-right));
+      bottom: max(1.25rem, env(safe-area-inset-bottom));
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      z-index: 1500;
+      transition: opacity 0.28s ease, transform 0.28s ease;
+    }
+    .reader-fab button {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(20,20,28,0.78);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      color: #fff;
+      font-size: 1.05rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+    .reader-fab button:hover { background: rgba(99,102,241,0.85); }
+    .reader-fab button:active { transform: scale(0.94); }
+    body.reader-ui-hidden .reader-fab {
+      opacity: 0;
+      transform: translateX(20px);
+      pointer-events: none;
+    }
+    @media (max-width: 480px) {
+      .reader-fab button { width: 44px; height: 44px; }
+    }
+
+    /* ---- Reader Settings: brightness overlay + zoom ---- */
+    #brightnessOverlay {
+      position: fixed; inset: 0; background: #000;
+      opacity: 0; pointer-events: none; z-index: 1300;
+      transition: opacity 0.15s ease;
+    }
+    #chapterImages { transform-origin: top center; transition: transform 0.15s ease; }
+
+    /* ---- Reader Settings Panel ---- */
+    .reader-settings-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+      z-index: 1600; display: none; align-items: flex-start; justify-content: center;
+      padding: 1rem; overflow-y: auto;
+    }
+    .reader-settings-overlay.active { display: flex; }
+    .reader-settings-panel {
+      width: 100%; max-width: 420px; margin-top: 4rem;
+      background: var(--bg-card, #141414); color: var(--text-primary, #fff);
+      border: 1px solid var(--border-color, #2a2a2a); border-radius: 14px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5); padding: 1.25rem;
+    }
+    .reader-settings-panel h3 { margin: 0 0 0.25rem; font-size: 1.15rem; font-weight: 700; display:flex; align-items:center; gap:.5rem;}
+    .reader-settings-panel .rs-subtitle { color: var(--text-secondary, #bdbdbd); font-size: 0.85rem; margin: 0 0 1rem; }
+    .reader-settings-panel .rs-group { margin: 1rem 0; }
+    .reader-settings-panel .rs-label {
+      display:flex; justify-content:space-between; align-items:center;
+      font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;
+    }
+    .reader-settings-panel .rs-value { color: var(--accent-primary, #6366f1); font-variant-numeric: tabular-nums; }
+    .reader-settings-panel input[type="range"] { width: 100%; accent-color: var(--accent-primary, #6366f1); }
+    .reader-settings-panel .rs-row { display:flex; gap:0.5rem; align-items:center; }
+    .reader-settings-panel .rs-row .btn { flex: 1; }
+    .reader-settings-panel .rs-toggle {
+      display:inline-flex; align-items:center; gap:.5rem; cursor:pointer; user-select:none;
+    }
+    .reader-settings-panel .rs-switch {
+      position: relative; width: 40px; height: 22px; background: #444; border-radius: 999px; transition: background .15s;
+    }
+    .reader-settings-panel .rs-switch::after {
+      content:''; position:absolute; top:2px; left:2px; width:18px; height:18px;
+      background:#fff; border-radius:50%; transition: transform .15s;
+    }
+    .reader-settings-panel input[type="checkbox"]:checked + .rs-switch { background: var(--accent-primary, #6366f1); }
+    .reader-settings-panel input[type="checkbox"]:checked + .rs-switch::after { transform: translateX(18px); }
+    .reader-settings-panel input[type="checkbox"].rs-cb { position:absolute; opacity:0; pointer-events:none; }
+    .reader-settings-panel .rs-actions { display:flex; gap:.5rem; margin-top: 1.25rem; }
+    .reader-settings-panel .rs-actions button {
+      flex:1; padding: 0.65rem 1rem; border-radius: 8px; cursor: pointer; font-weight: 600;
+      border: 1px solid var(--border-color, #2a2a2a); background: transparent; color: var(--text-primary, #fff);
+    }
+    .reader-settings-panel .rs-actions .rs-primary {
+      background: var(--accent-primary, #6366f1); border-color: var(--accent-primary, #6366f1);
+    }
+  </style>
+</head>
+<body>
+  <div class="loading-screen" id="loadingScreen">
+    <div class="spinner"></div>
+    <p>Loading chapter...</p>
+  </div>
+
+  <!-- Reader brightness dimming overlay -->
+  <div id="brightnessOverlay" aria-hidden="true"></div>
+
+  <!-- Reader Settings Panel -->
+  <div class="reader-settings-overlay" id="readerSettingsOverlay" role="dialog" aria-modal="true" aria-labelledby="readerSettingsTitle">
+    <div class="reader-settings-panel" onclick="event.stopPropagation()">
+      <h3 id="readerSettingsTitle"><i class="fas fa-cog"></i> Reader Settings</h3>
+      <p class="rs-subtitle">Customize your reading experience.</p>
+
+      <div class="rs-group">
+        <div class="rs-label"><span><i class="fas fa-sun"></i> Brightness</span><span class="rs-value" id="rsBrightnessVal">100%</span></div>
+        <input type="range" id="rsBrightness" min="20" max="100" step="1" value="100">
+      </div>
+
+      <div class="rs-group">
+        <div class="rs-label">
+          <label class="rs-toggle" for="rsAutoScroll">
+            <span><i class="fas fa-arrows-alt-v"></i> Auto-Scroll</span>
+          </label>
+          <label class="rs-toggle" for="rsAutoScroll">
+            <input type="checkbox" id="rsAutoScroll" class="rs-cb">
+            <span class="rs-switch" aria-hidden="true"></span>
+          </label>
+        </div>
+        <div class="rs-label" style="margin-top:.5rem;"><span>Speed</span><span class="rs-value" id="rsSpeedVal">1.0x</span></div>
+        <input type="range" id="rsSpeed" min="0.1" max="100" step="0.1" value="1">
+        <p style="font-size:.75rem;color:var(--text-muted,#888);margin:.4rem 0 0;">Drag the speed slider freely — changes apply instantly. No upper limit.</p>
+      </div>
+
+      <div class="rs-group">
+        <div class="rs-label"><span><i class="fas fa-search-plus"></i> Zoom Level</span><span class="rs-value" id="rsZoomVal">100%</span></div>
+        <div class="rs-row">
+          <button type="button" class="btn btn-secondary btn-sm" id="rsZoomOut" title="Zoom out"><i class="fas fa-search-minus"></i></button>
+          <input type="range" id="rsZoom" min="50" max="250" step="5" value="100" style="flex:1;">
+          <button type="button" class="btn btn-secondary btn-sm" id="rsZoomIn" title="Zoom in"><i class="fas fa-search-plus"></i></button>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="rsZoomReset" style="margin-top:.5rem;width:100%;">Reset Zoom</button>
+      </div>
+
+      <div class="rs-actions">
+        <button type="button" id="rsReset">Reset All</button>
+        <button type="button" class="rs-primary" id="rsClose">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 18+ Content Warning Modal (shared logic with series.html) -->
+  <div id="adultWarningOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:1rem;">
+    <div role="dialog" aria-modal="true" aria-labelledby="adultWarningTitle" style="max-width:480px;width:100%;background:var(--bg-card,#141414);color:var(--text-primary,#fff);border:1px solid var(--border-color,#2a2a2a);border-radius:14px;padding:1.75rem 1.5rem;box-shadow:0 20px 60px rgba(0,0,0,0.5);text-align:center;">
+      <div style="font-size:2.25rem;line-height:1;margin-bottom:0.5rem;">⚠️</div>
+      <h2 id="adultWarningTitle" style="margin:0 0 0.75rem;font-size:1.35rem;font-weight:700;">18+ Content Warning</h2>
+      <p style="margin:0 0 0.4rem;color:var(--text-secondary,#bdbdbd);line-height:1.5;">
+        This series contains mature content that may not be suitable for all audiences.
+      </p>
+      <p style="margin:0 0 1.25rem;color:var(--text-secondary,#bdbdbd);line-height:1.5;">
+        By continuing, you confirm that you are of legal age in your region and wish to view this content.
+      </p>
+      <div style="display:flex;gap:0.6rem;flex-wrap:wrap;justify-content:center;">
+        <button id="adultWarningBack" type="button" style="flex:1 1 140px;min-width:120px;padding:0.7rem 1rem;border-radius:8px;background:transparent;border:1px solid var(--border-color,#2a2a2a);color:var(--text-primary,#fff);cursor:pointer;font-weight:600;">
+          Go Back
+        </button>
+        <button id="adultWarningContinue" type="button" style="flex:1 1 140px;min-width:120px;padding:0.7rem 1rem;border-radius:8px;background:var(--accent-primary,#6366f1);border:1px solid var(--accent-primary,#6366f1);color:#fff;cursor:pointer;font-weight:600;">
+          Continue
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Reader Header
+       FIXES:
+       - Removed the long "Series Title - Chapter X" text that wrapped on
+         mobile and pushed the chapter selector off-screen.
+       - The manhwa cover image is now the header logo and links back to
+         the series details page (per spec).
+       - Added explicit Home and Refresh buttons next to Prev/Next so
+         readers always have full navigation without relying on browser UI.
+  -->
+  <header class="reader-header" id="readerHeader">
+    <div class="reader-header-content container">
+      <a href="series.html" id="readerCoverLink" class="reader-cover-link" title="Back to series">
+        <img id="readerCoverImg" src="../images/placeholder.jpg" alt="Series cover" class="reader-cover-img">
+      </a>
+      <div class="reader-meta">
+        <div class="reader-chapter-label" id="readerSubtitle"></div>
+      </div>
+      <div class="reader-nav">
+        <a href="#" class="btn btn-secondary btn-sm" id="prevChapterBtn" style="display:none;" title="Previous chapter">
+          <i class="fas fa-chevron-left"></i> <span class="reader-btn-label">Prev</span>
+        </a>
+        <div class="chapter-picker" id="chapterPicker">
+          <button type="button" class="chapter-picker-btn" id="chapterPickerBtn" aria-haspopup="listbox" aria-expanded="false">
+            <span class="chapter-picker-label" id="chapterPickerLabel">Loading...</span>
+            <i class="fas fa-chevron-down chapter-picker-caret" aria-hidden="true"></i>
+          </button>
+          <div class="chapter-picker-panel" id="chapterPickerPanel" role="listbox" hidden>
+            <div class="chapter-picker-header">
+              <span>Chapters list</span>
+              <button type="button" class="icon-btn chapter-picker-close" id="chapterPickerClose" aria-label="Close">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+            <div class="chapter-picker-list" id="chapterPickerList"></div>
+          </div>
+        </div>
+        <a href="#" class="btn btn-secondary btn-sm" id="nextChapterBtn" style="display:none;" title="Next chapter">
+          <span class="reader-btn-label">Next</span> <i class="fas fa-chevron-right"></i>
+        </a>
+      </div>
+      <div class="reader-tools">
+        <a href="../index.html" class="icon-btn" title="Home">
+          <i class="fas fa-home"></i>
+        </a>
+        <button class="icon-btn" type="button" onclick="window.location.reload()" title="Refresh chapter">
+          <i class="fas fa-sync-alt"></i>
+        </button>
+        <button class="icon-btn" type="button" id="reportBtnHeader" onclick="window.openReportModal&&window.openReportModal()" title="Report chapter issue">
+          <i class="fas fa-flag"></i>
+        </button>
+        <button class="icon-btn" onclick="toggleBookmark()" title="Bookmark">
+          <i class="far fa-bookmark" id="bookmarkIcon"></i>
+        </button>
+        <button class="icon-btn" data-theme-toggle title="Toggle Theme">
+          <i class="fas fa-moon"></i>
+        </button>
+        <button class="icon-btn" type="button" id="readerSettingsBtn" title="Reader Settings" aria-label="Reader Settings">
+          <i class="fas fa-cog"></i>
+        </button>
+        <a href="series.html" class="icon-btn" id="backToSeries" title="Back to Series">
+          <i class="fas fa-times"></i>
+        </a>
+      </div>
+    </div>
+  </header>
+
+
+  <!-- Reader Progress -->
+  <div class="reader-progress" id="readerProgress">
+    <div class="reader-progress-bar" id="progressBar" style="width: 0%"></div>
+  </div>
+
+  <!-- Main Reader Content -->
+  <main style="padding-top: var(--header-height);">
+    <!-- Chapter Images -->
+    <div class="reader-container" id="readerContainer">
+      <div id="chapterImages" style="min-height: 50vh;">
+        <div style="display:flex;justify-content:center;align-items:center;padding:4rem;">
+          <div class="spinner"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chapter Navigation Footer -->
+    <div class="reader-container" style="padding: var(--space-xl) var(--space-md); border-top: 1px solid var(--bg-tertiary); margin-top: var(--space-xl);">
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--space-md); flex-wrap: wrap;">
+        <a href="#" class="btn btn-secondary" id="footerPrevBtn" style="display:none;">
+          <i class="fas fa-chevron-left"></i> Previous Chapter
+        </a>
+        <a href="#" class="btn btn-secondary" id="footerSeriesBtn">
+          <i class="fas fa-list"></i> Chapter List
+        </a>
+        <button type="button" class="btn btn-ghost" id="reportBtnFooter" onclick="window.openReportModal&&window.openReportModal()" title="Report chapter issue">
+          <i class="fas fa-flag"></i> Report
+        </button>
+        <a href="#" class="btn btn-primary" id="footerNextBtn" style="display:none;">
+          Next Chapter <i class="fas fa-chevron-right"></i>
+        </a>
+      </div>
+    </div>
+
+    <!-- Chapter Reactions (above Discussion) -->
+    <div class="reader-container">
+      <section class="chapter-reactions-section" id="chapterReactionsSection"
+               style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:var(--space-lg);margin-bottom:var(--space-lg);">
+        <div style="text-align:center;margin-bottom:var(--space-md);">
+          <h3 style="margin:0;font-size:1.05rem;color:var(--text-primary);">What did you think of this chapter?</h3>
+          <p style="margin:.25rem 0 0;color:var(--text-muted);font-size:.875rem;">
+            <span id="chapterReactionsTotal">0</span> reactions
+          </p>
+        </div>
+        <div id="chapterReactionsGrid"
+             style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-md);max-width:480px;margin:0 auto;">
+          <!-- buttons injected by Comments.initChapterReactions() -->
+        </div>
+      </section>
+    </div>
+
+    <!-- Discussion Section -->
+    <div class="reader-container">
+      <section class="discussion-section" id="discussionSection">
+        <div class="discussion-header">
+          <h2 class="discussion-title">
+            <i class="far fa-comments"></i> Discussion 
+            <span style="color: var(--text-muted); font-size: 0.875rem;">(<span id="commentCount">0</span>)</span>
+          </h2>
+          <div class="discussion-sort" style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+            <button class="sort-btn active" data-comment-sort="newest">Newest</button>
+            <button class="sort-btn" data-comment-sort="oldest">Oldest</button>
+            <button class="sort-btn" data-comment-sort="mostLiked">Top</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="commentRulesBtn" onclick="Comments.openRules()" title="View commenting rules">
+              <i class="fas fa-gavel"></i> Rules
+            </button>
+          </div>
+        </div>
+
+        <!-- Comment Form -->
+        <div class="comment-form" id="commentForm">
+          <img data-user-avatar src="../images/default-avatar.png" alt="You" class="comment-avatar" id="commentAvatar">
+          <div class="comment-input-wrapper">
+            <div class="format-toolbar" role="toolbar" aria-label="Text formatting">
+              <button type="button" class="format-btn" title="Bold (**text**)" onclick="Comments.applyFormat('#commentInput','bold')"><b>B</b></button>
+              <button type="button" class="format-btn" title="Italic (*text*)" onclick="Comments.applyFormat('#commentInput','italic')"><i>I</i></button>
+              <button type="button" class="format-btn" title="Strikethrough (/text/)" onclick="Comments.applyFormat('#commentInput','strike')"><s>S</s></button>
+              <button type="button" class="format-btn" data-format-image title="Insert Image (URL)" onclick="Comments.insertImageInto('#commentInput')"><i class="far fa-image"></i></button>
+            </div>
+            <textarea class="comment-input" id="commentInput" rows="3" placeholder="Share your thoughts on this chapter... (Login required)"></textarea>
+            <div class="comment-actions" style="display:flex;flex-wrap:wrap;gap:.75rem;align-items:center;">
+              <label style="display:inline-flex;align-items:center;gap:.4rem;font-size:.875rem;color:var(--text-secondary);cursor:pointer;margin-right:auto;">
+                <input type="checkbox" id="commentSpoiler" style="width:16px;height:16px;">
+                <i class="fas fa-eye-slash"></i> Mark as spoiler
+              </label>
+              <button class="btn btn-primary btn-sm" id="submitComment" type="button">
+                <i class="fas fa-paper-plane"></i> Post Comment
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Login Prompt for Guests -->
+        <div id="guestCommentPrompt" class="comment-form" style="display:none;">
+          <div style="flex:1;padding:var(--space-md);background:var(--bg-card);border-radius:var(--radius-md);text-align:center;">
+            <p style="color:var(--text-secondary);margin-bottom:var(--space-md);">
+              <i class="fas fa-lock" style="margin-right:var(--space-sm);"></i>
+              Please login to join the discussion
+            </p>
+            <a href="login.html" class="btn btn-primary">Login to Comment</a>
+          </div>
+        </div>
+
+        <!-- Comments List -->
+        <div id="commentsLoading" style="display:none;">
+          <div style="display:flex;justify-content:center;padding:2rem;">
+            <div class="spinner spinner-sm"></div>
+          </div>
+        </div>
+        <div id="commentsList">
+          <!-- Comments will be loaded here -->
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Reader Footer Progress -->
+  <div style="padding: var(--space-xl); text-align: center; color: var(--text-muted); font-size: 0.8125rem;">
+    <p> YoruVerse. Read responsibly.</p>
+  </div>
+
+  <script>
+    // ==================== READER SETTINGS ====================
+    (function () {
+      const STORAGE_KEY = 'reader.settings.v1';
+      const DEFAULTS = { brightness: 100, autoScroll: false, speed: 1, zoom: 100 };
+      let state = Object.assign({}, DEFAULTS);
+      let rafId = null, lastTs = 0, scrollAcc = 0;
+
+      function load() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) state = Object.assign({}, DEFAULTS, JSON.parse(raw));
+        } catch (_) {}
+      }
+      function save() {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (_) {}
+      }
+
+      function applyBrightness() {
+        const o = document.getElementById('brightnessOverlay');
+        if (!o) return;
+        // brightness 100 = no dim, 20 = heavy dim
+        const dim = (100 - Math.max(20, Math.min(100, state.brightness))) / 100;
+        o.style.opacity = String(dim * 0.85);
+        const v = document.getElementById('rsBrightnessVal');
+        if (v) v.textContent = state.brightness + '%';
+      }
+      function applyZoom() {
+        const el = document.getElementById('chapterImages');
+        if (el) el.style.transform = 'scale(' + (state.zoom / 100) + ')';
+        const v = document.getElementById('rsZoomVal');
+        if (v) v.textContent = state.zoom + '%';
+      }
+      function applySpeed() {
+        const v = document.getElementById('rsSpeedVal');
+        if (v) v.textContent = state.speed.toFixed(1) + 'x';
+      }
+
+      function tick(ts) {
+        if (!state.autoScroll) { rafId = null; return; }
+        if (!lastTs) lastTs = ts;
+        let dt = ts - lastTs; lastTs = ts;
+        // Clamp dt to avoid huge jumps after tab switch / GC pause.
+        if (dt > 100) dt = 100;
+        // Base: 240 px/sec at speed 1x. At 100x => 24,000 px/sec. No upper cap on slider value either.
+        scrollAcc += (240 * state.speed) * (dt / 1000);
+        if (scrollAcc >= 0.5) {
+          const step = scrollAcc;
+          scrollAcc = 0;
+          // Sub-pixel smooth: use scrollTo with float (browsers floor internally
+          // but accumulator preserves the remainder via fresh scrollY read).
+          const before = window.scrollY;
+          window.scrollTo(0, before + step);
+          // If browser actually moved less than requested (sub-pixel), carry remainder.
+          const actual = window.scrollY - before;
+          if (actual < step) scrollAcc += (step - actual);
+        }
+        // Stop if reached bottom
+        if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) {
+          stopAutoScroll();
+          const cb = document.getElementById('rsAutoScroll');
+          if (cb) cb.checked = false;
+          state.autoScroll = false; save();
+          return;
+        }
+        rafId = requestAnimationFrame(tick);
+      }
+      function startAutoScroll() {
+        if (rafId) return;
+        lastTs = 0; scrollAcc = 0;
+        rafId = requestAnimationFrame(tick);
+      }
+      function stopAutoScroll() {
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = null;
+        lastTs = 0;
+      }
+
+      function syncControls() {
+        const b = document.getElementById('rsBrightness'); if (b) b.value = state.brightness;
+        const z = document.getElementById('rsZoom'); if (z) z.value = state.zoom;
+        const s = document.getElementById('rsSpeed'); if (s) s.value = state.speed;
+        const a = document.getElementById('rsAutoScroll'); if (a) a.checked = !!state.autoScroll;
+        applyBrightness(); applyZoom(); applySpeed();
+      }
+
+      function open() {
+        const o = document.getElementById('readerSettingsOverlay');
+        if (o) { o.classList.add('active'); syncControls(); }
+      }
+      function close() {
+        const o = document.getElementById('readerSettingsOverlay');
+        if (o) o.classList.remove('active');
+      }
+
+      function init() {
+        load();
+        syncControls();
+        if (state.autoScroll) startAutoScroll();
+
+        const btn = document.getElementById('readerSettingsBtn');
+        if (btn) btn.addEventListener('click', open);
+
+        const overlay = document.getElementById('readerSettingsOverlay');
+        if (overlay) overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+        const closeBtn = document.getElementById('rsClose');
+        if (closeBtn) closeBtn.addEventListener('click', close);
+
+        const bright = document.getElementById('rsBrightness');
+        if (bright) bright.addEventListener('input', (e) => {
+          state.brightness = parseInt(e.target.value, 10); applyBrightness(); save();
+        });
+
+        const speed = document.getElementById('rsSpeed');
+        if (speed) speed.addEventListener('input', (e) => {
+          state.speed = Math.max(0.1, parseFloat(e.target.value) || 1); applySpeed(); save();
+          // If toggled on, ensure the loop is running so the new speed takes effect immediately.
+          if (state.autoScroll && !rafId) startAutoScroll();
+        });
+
+        const auto = document.getElementById('rsAutoScroll');
+        if (auto) auto.addEventListener('change', (e) => {
+          state.autoScroll = !!e.target.checked; save();
+          if (state.autoScroll) startAutoScroll(); else stopAutoScroll();
+        });
+
+        const zoom = document.getElementById('rsZoom');
+        if (zoom) zoom.addEventListener('input', (e) => {
+          state.zoom = parseInt(e.target.value, 10); applyZoom(); save();
+        });
+        document.getElementById('rsZoomIn')?.addEventListener('click', () => {
+          state.zoom = Math.min(250, state.zoom + 10);
+          const z = document.getElementById('rsZoom'); if (z) z.value = state.zoom;
+          applyZoom(); save();
+        });
+        document.getElementById('rsZoomOut')?.addEventListener('click', () => {
+          state.zoom = Math.max(50, state.zoom - 10);
+          const z = document.getElementById('rsZoom'); if (z) z.value = state.zoom;
+          applyZoom(); save();
+        });
+        document.getElementById('rsZoomReset')?.addEventListener('click', () => {
+          state.zoom = 100;
+          const z = document.getElementById('rsZoom'); if (z) z.value = 100;
+          applyZoom(); save();
+        });
+
+        document.getElementById('rsReset')?.addEventListener('click', () => {
+          state = Object.assign({}, DEFAULTS);
+          syncControls(); save();
+          stopAutoScroll();
+        });
+
+        // Pause auto-scroll only on real user-driven scroll input (wheel or a
+        // genuine touch drag). A plain tap (touchstart) must NOT pause, or
+        // mobile auto-scroll constantly stutters when fingers brush the screen.
+        let pauseTimer = null;
+        let touchStartY = 0;
+        const userInterrupt = () => {
+          if (!state.autoScroll) return;
+          stopAutoScroll();
+          clearTimeout(pauseTimer);
+          pauseTimer = setTimeout(() => { if (state.autoScroll) startAutoScroll(); }, 800);
+        };
+        window.addEventListener('wheel', userInterrupt, { passive: true });
+        window.addEventListener('touchstart', (e) => {
+          if (e.touches && e.touches[0]) touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+        window.addEventListener('touchmove', (e) => {
+          if (!state.autoScroll) return;
+          const y = e.touches && e.touches[0] ? e.touches[0].clientY : touchStartY;
+          if (Math.abs(y - touchStartY) > 10) userInterrupt();
+        }, { passive: true });
+        window.addEventListener('keydown', (e) => {
+          if (['ArrowDown','ArrowUp','PageDown','PageUp','Home','End',' '].includes(e.key)) userInterrupt();
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else { init(); }
+    })();
+  </script>
+  <script src="../js/path-utils.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+  <script src="../js/firebase-config.js"></script>
+  <script src="../js/ui.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/db.js"></script>
+  <script src="../js/exp-system.js"></script>
+  <script src="../js/donation.js"></script>
+  <script src="../js/comments.js"></script>
+  
+  <script>
+    // ==================== CHAPTER READER LOGIC ====================
+    
+    let currentSeries = null;
+    let currentChapter = null;
+    let allChapters = [];
+    let seriesId = null;
+    let chapterId = null;
+    let readingProgress = 0;
+
+    // ---- 18+ Content Warning helpers (mirrors series.html) ----
+    function isAdultSeries(series) {
+      const tags = (series?.genres || []).map(g => String(g).toLowerCase().trim());
+      return tags.some(t => t === '18+' || t === 'adult' || t === 'mature' || t === 'nsfw' || t === '18plus' || t === 'r18');
+    }
+    function hasValidAdultConsent() {
+      try {
+        const raw = localStorage.getItem('adultContentConsent');
+        if (!raw) return false;
+        const data = JSON.parse(raw);
+        const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+        if (!data?.confirmedAt) return false;
+        if (Date.now() - data.confirmedAt > SEVEN_DAYS) return false;
+        return true;
+      } catch (_) { return false; }
+    }
+    function ensureAdultConsent() {
+      if (hasValidAdultConsent()) return Promise.resolve(true);
+      return new Promise(resolve => {
+        const overlay = document.getElementById('adultWarningOverlay');
+        const btnContinue = document.getElementById('adultWarningContinue');
+        const btnBack = document.getElementById('adultWarningBack');
+        const ls = document.getElementById('loadingScreen');
+        if (ls) ls.classList.add('hidden');
+        overlay.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        const cleanup = (result) => {
+          overlay.style.display = 'none';
+          document.body.style.overflow = '';
+          btnContinue.removeEventListener('click', onContinue);
+          btnBack.removeEventListener('click', onBack);
+          resolve(result);
+        };
+        const onContinue = () => {
+          try { localStorage.setItem('adultContentConsent', JSON.stringify({ confirmedAt: Date.now() })); } catch (_) {}
+          cleanup(true);
+        };
+        const onBack = () => cleanup(false);
+        btnContinue.addEventListener('click', onContinue);
+        btnBack.addEventListener('click', onBack);
+      });
+    }
+
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      UI.init();
+
+      // Get URL params
+      const urlParams = new URLSearchParams(window.location.search);
+      seriesId = urlParams.get('series');
+      chapterId = urlParams.get('chapter');
+
+      if (!seriesId) {
+        showToast('No series specified', 'error');
+        window.location.href = '../index.html';
+        return;
+      }
+
+      try {
+        // Load series info
+        currentSeries = await DB.getSeriesById(seriesId);
+        if (!currentSeries) {
+          throw new Error('Series not found');
+        }
+
+        // 18+ Content Warning — gate the reader the same way as series details
+        if (isAdultSeries(currentSeries)) {
+          const ok = await ensureAdultConsent();
+          if (!ok) {
+            if (history.length > 1) history.back();
+            else window.location.href = '../index.html';
+            return;
+          }
+        }
+
+
+        // Load all chapters for navigation
+        const chaptersResult = await DB.getChapters(seriesId, { limit: 500 });
+        allChapters = chaptersResult.chapters.sort((a, b) => a.chapterNumber - b.chapterNumber);
+
+        // Determine which chapter to load
+        if (chapterId === 'first') {
+          currentChapter = allChapters[0];
+          chapterId = currentChapter?.id;
+        } else if (chapterId === 'latest') {
+          currentChapter = allChapters[allChapters.length - 1];
+          chapterId = currentChapter?.id;
+        } else if (chapterId) {
+          currentChapter = await DB.getChapter(chapterId);
+        }
+
+        if (!currentChapter && allChapters.length > 0) {
+          currentChapter = allChapters[0];
+          chapterId = currentChapter.id;
+        }
+
+        if (!currentChapter) {
+          throw new Error('No chapters available');
+        }
+
+        // Render reader
+        renderReader();
+        
+        // Setup chapter selector
+        setupChapterSelector();
+        
+        // Setup navigation buttons
+        setupNavigation();
+        
+        // Track reading progress
+        setupProgressTracking();
+        
+        // Add to history + mark this chapter as read.
+        // Previously this only fired when `auth.currentUser` was already
+        // populated synchronously — on a hard refresh that race condition
+        // meant "Read" status never got persisted. We now also listen for
+        // the very next authStateChanged event so logged-in users always
+        // get credit for the chapter they just opened.
+        const recordRead = () => {
+          if (auth.currentUser) {
+            DB.addToHistory(seriesId, chapterId, currentChapter.chapterNumber);
+          }
+        };
+        recordRead();
+        window.addEventListener('authStateChanged', recordRead, { once: true });
+
+        // ---------------------------------------------------------------
+        // EXP gating: only award EXP if the reader actually stays on the
+        // chapter page. Previously EXP was given the moment the chapter
+        // opened, so readers could farm XP just by opening chapters
+        // without reading them. Now we require ~1 minute of dwell time
+        // with the tab visible before awarding EXP, and we only award
+        // once per page load.
+        // ---------------------------------------------------------------
+        (function scheduleExpAward() {
+          const REQUIRED_MS = 60 * 1000; // 1 minute
+          let dwellMs = 0;
+          let lastTick = Date.now();
+          let awarded = false;
+
+          const tick = () => {
+            if (awarded) return;
+            const now = Date.now();
+            // Only accumulate time when the tab is visible.
+            if (document.visibilityState === 'visible') {
+              dwellMs += now - lastTick;
+            }
+            lastTick = now;
+            if (dwellMs >= REQUIRED_MS) {
+              awarded = true;
+              clearInterval(intervalId);
+              try {
+                if (auth.currentUser && typeof EXPSystem !== 'undefined') {
+                  EXPSystem.onChapterRead(seriesId, chapterId);
+                }
+              } catch (e) {
+                console.warn('[Chapter] EXP award failed:', e);
+              }
+            }
+          };
+
+          // Reset the visibility timer baseline when the tab regains focus
+          // so background time is never counted.
+          document.addEventListener('visibilitychange', () => {
+            lastTick = Date.now();
+          });
+
+          const intervalId = setInterval(tick, 5000);
+        })();
+
+        // Update back link
+        document.getElementById('backToSeries').href = AppPath.to(`pages/series.html?id=${seriesId}`);
+
+
+        document.getElementById('loadingScreen').classList.add('hidden');
+
+        // Initialize comments + chapter-level reactions bar
+        Comments.init(chapterId);
+        Comments.initChapterReactions(chapterId);
+
+        // Highlight a reported comment when arrived from the admin
+        // dashboard's "Open" button (?commentId=...).
+        try {
+          const highlightCommentId = urlParams.get('commentId');
+          if (highlightCommentId) {
+            let tries = 0;
+            const iv = setInterval(() => {
+              const el = document.querySelector(`[data-comment-id="${CSS.escape(highlightCommentId)}"]`);
+              if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.style.transition = 'box-shadow .4s, background .4s';
+                el.style.boxShadow = '0 0 0 3px #f59e0b';
+                setTimeout(() => { el.style.boxShadow = ''; }, 3500);
+                clearInterval(iv);
+              } else if (++tries > 40) {
+                clearInterval(iv);
+              }
+            }, 300);
+          }
+        } catch (_) {}
+
+        // Setup auth state for comment form
+        updateCommentFormVisibility();
+        window.addEventListener('authStateChanged', () => {
+          updateCommentFormVisibility();
+        });
+
+      } catch (error) {
+        console.error('Error loading chapter:', error);
+        document.getElementById('loadingScreen').innerHTML = `
+          <div style="text-align:center;">
+            <i class="fas fa-exclamation-circle" style="font-size:3rem;color:var(--error);margin-bottom:1rem;"></i>
+            <h3>Error Loading Chapter</h3>
+            <p>${error.message}</p>
+            <a href="series.html?id=${seriesId}" class="btn btn-primary" style="margin-top:1rem;">Back to Series</a>
+          </div>
+        `;
+      }
+    });
+
+    function renderReader() {
+      const seriesTitle = currentSeries?.title || 'Unknown';
+      const chapterTitle = currentChapter?.chapterTitle || `Chapter ${currentChapter?.chapterNumber}`;
+
+      // Header now shows the manhwa cover as the logo; clicking it sends
+      // the reader back to the series details page (per spec).
+      const cover = currentSeries?.coverImage || '../images/placeholder.jpg';
+      const coverImg = document.getElementById('readerCoverImg');
+      const coverLink = document.getElementById('readerCoverLink');
+      if (coverImg) { coverImg.src = cover; coverImg.alt = seriesTitle; }
+      if (coverLink) coverLink.href = AppPath.to(`pages/series.html?id=${seriesId}`);
+
+      document.getElementById('readerSubtitle').textContent =
+        `Chapter ${currentChapter?.chapterNumber} of ${allChapters.length}`;
+      document.title = `${chapterTitle} - ${seriesTitle} - YoruVerse`;
+
+
+      // Render images
+      const imagesContainer = document.getElementById('chapterImages');
+      const imageUrls = currentChapter?.imageUrls || [];
+
+      if (imageUrls.length === 0) {
+        imagesContainer.innerHTML = `
+          <div style="text-align:center;padding:4rem;">
+            <i class="fas fa-image" style="font-size:3rem;color:var(--text-muted);margin-bottom:1rem;"></i>
+            <h3>No Images Available</h3>
+            <p>This chapter doesn't have any images yet.</p>
+          </div>
+        `;
+        return;
+      }
+
+      imagesContainer.innerHTML = imageUrls.map((url, index) => {
+        // First 3 pages: load eagerly with the real src + high fetch priority
+        // so the reader never sees a blank screen while IO catches up. Rest
+        // use data-src + IntersectionObserver via UI.initLazyLoading().
+        const eager = index < 3;
+        const srcAttr = eager ? `src="${url}"` : `data-src="${url}"`;
+        const priority = index === 0 ? 'high' : (eager ? 'auto' : 'low');
+        return `
+        <div class="reader-image" data-page="${index + 1}">
+          <img ${srcAttr}
+               alt="Page ${index + 1}"
+               loading="${eager ? 'eager' : 'lazy'}"
+               decoding="async"
+               fetchpriority="${priority}"
+               onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\\'padding:2rem;text-align:center;color:var(--text-muted);\\'>Failed to load page ${index + 1}</div>'">
+        </div>`;
+      }).join('');
+
+      // Initialize lazy loading for the remaining pages
+      UI.initLazyLoading();
+
+      // Aggressively warm the network cache for the next handful of pages.
+      // IntersectionObserver still drives the actual <img>.src swap (so we
+      // don't pay decode cost up front), but the bytes will already be in
+      // the HTTP/SW cache by the time the user scrolls there.
+      try {
+        const WARM_AHEAD = 6;
+        for (let i = 3; i < Math.min(imageUrls.length, 3 + WARM_AHEAD); i++) {
+          const pre = new Image();
+          pre.decoding = 'async';
+          pre.loading  = 'eager';
+          pre.src = imageUrls[i];
+        }
+      } catch (_) {}
+
+      // Prefetch the FIRST image of the next chapter so tapping "Next" feels
+      // instant. Uses <link rel=prefetch> so the browser treats it as low
+      // priority and won't fight the current chapter's network budget.
+      try {
+        const idx  = allChapters.findIndex(c => c.id === chapterId);
+        const next = idx >= 0 ? allChapters[idx + 1] : null;
+        const nextFirst = next && next.imageUrls && next.imageUrls[0];
+        if (nextFirst) {
+          const link = document.createElement('link');
+          link.rel  = 'prefetch';
+          link.as   = 'image';
+          link.href = nextFirst;
+          document.head.appendChild(link);
+        }
+      } catch (_) {}
+    }
+
+    function setupChapterSelector() {
+      const btn       = document.getElementById('chapterPickerBtn');
+      const label     = document.getElementById('chapterPickerLabel');
+      const panel     = document.getElementById('chapterPickerPanel');
+      const list      = document.getElementById('chapterPickerList');
+      const closeBtn  = document.getElementById('chapterPickerClose');
+      const picker    = document.getElementById('chapterPicker');
+      if (!btn || !panel || !list) return;
+
+      const placeholder = AppPath.to('images/placeholder.svg');
+
+      // Label = current chapter
+      const current = allChapters.find(c => c.id === chapterId);
+      if (current) {
+        label.textContent = `Chapter ${current.chapterNumber}` +
+          (current.chapterTitle && current.chapterTitle.trim().toLowerCase() !== `chapter ${current.chapterNumber}`.toLowerCase()
+            ? `: ${current.chapterTitle}` : '');
+      }
+
+      // Newest-first listing to match reference design.
+      // Thumbnail picking is centralized in UI.pickChapterThumb so the
+      // Chapter page picker and the Series page chapter list always show
+      // the SAME thumbnail for the SAME chapter (and never the cover).
+      const pickCharacterThumb = (ch) => {
+        if (UI && typeof UI.pickChapterThumb === 'function') {
+          return UI.pickChapterThumb(ch);
+        }
+        return (ch && ch.thumbnail) || placeholder;
+      };
+
+
+      const sorted = [...allChapters].sort((a, b) => b.chapterNumber - a.chapterNumber);
+      list.innerHTML = sorted.map(ch => {
+        const thumb = pickCharacterThumb(ch);
+        const time  = (UI && UI.timeAgo) ? UI.timeAgo(ch.createdAt || ch.releasedAt || ch.updatedAt) : '';
+        const isActive = ch.id === chapterId;
+        const hasCustom = ch.chapterTitle && ch.chapterTitle.trim()
+          && ch.chapterTitle.trim().toLowerCase() !== `chapter ${ch.chapterNumber}`.toLowerCase();
+        const title = `Chapter ${ch.chapterNumber}` + (hasCustom ? `: ${ch.chapterTitle}` : '');
+        return `
+          <button type="button" class="chapter-picker-item ${isActive ? 'active' : ''}" data-id="${ch.id}" role="option" aria-selected="${isActive}">
+            <div class="chapter-picker-thumb">
+              <img src="${thumb}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${placeholder}';">
+            </div>
+            <div class="chapter-picker-info">
+              <div class="chapter-picker-title">${title}</div>
+              ${time ? `<div class="chapter-picker-time">${time}</div>` : ''}
+            </div>
+          </button>`;
+      }).join('');
+
+      const open = () => {
+        panel.hidden = false;
+        btn.setAttribute('aria-expanded', 'true');
+        picker.classList.add('open');
+        // Scroll active item into view
+        const active = list.querySelector('.chapter-picker-item.active');
+        if (active) active.scrollIntoView({ block: 'center' });
+      };
+      const close = () => {
+        panel.hidden = true;
+        btn.setAttribute('aria-expanded', 'false');
+        picker.classList.remove('open');
+      };
+
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        panel.hidden ? open() : close();
+      });
+      if (closeBtn) closeBtn.addEventListener('click', close);
+      list.addEventListener('click', (e) => {
+        const item = e.target.closest('.chapter-picker-item');
+        if (!item) return;
+        const id = item.getAttribute('data-id');
+        close();
+        navigateToChapter(id);
+      });
+      document.addEventListener('click', (e) => {
+        if (!panel.hidden && !picker.contains(e.target)) close();
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !panel.hidden) close();
+      });
+    }
+
+    function setupNavigation() {
+      if (!currentChapter || allChapters.length === 0) return;
+
+      const currentIndex = allChapters.findIndex(ch => ch.id === chapterId);
+      
+      // Previous chapter
+      if (currentIndex > 0) {
+        const prevChapter = allChapters[currentIndex - 1];
+        document.getElementById('prevChapterBtn').style.display = 'inline-flex';
+        document.getElementById('prevChapterBtn').href = AppPath.to(`pages/chapter.html?series=${seriesId}&chapter=${prevChapter.id}`);
+        document.getElementById('footerPrevBtn').style.display = 'inline-flex';
+        document.getElementById('footerPrevBtn').href = AppPath.to(`pages/chapter.html?series=${seriesId}&chapter=${prevChapter.id}`);
+      }
+
+      // Next chapter
+      if (currentIndex < allChapters.length - 1) {
+        const nextChapter = allChapters[currentIndex + 1];
+        document.getElementById('nextChapterBtn').style.display = 'inline-flex';
+        document.getElementById('nextChapterBtn').href = AppPath.to(`pages/chapter.html?series=${seriesId}&chapter=${nextChapter.id}`);
+        document.getElementById('footerNextBtn').style.display = 'inline-flex';
+        document.getElementById('footerNextBtn').href = AppPath.to(`pages/chapter.html?series=${seriesId}&chapter=${nextChapter.id}`);
+      }
+
+      // Series link
+      document.getElementById('footerSeriesBtn').href = AppPath.to(`pages/series.html?id=${seriesId}`);
+    }
+
+    function navigateToChapter(newChapterId) {
+      if (newChapterId === chapterId) return;
+      window.location.href = AppPath.to(`pages/chapter.html?series=${seriesId}&chapter=${newChapterId}`);
+    }
+
+    function setupProgressTracking() {
+      let ticking = false;
+      
+      window.addEventListener('scroll', () => {
+        if (!ticking) {
+          requestAnimationFrame(() => {
+            updateProgress();
+            ticking = false;
+          });
+          ticking = true;
+        }
+      });
+    }
+
+    function updateProgress() {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      
+      if (docHeight > 0) {
+        readingProgress = (scrollTop / docHeight) * 100;
+        document.getElementById('progressBar').style.width = `${Math.min(100, readingProgress)}%`;
+      }
+    }
+
+    async function toggleBookmark() {
+      if (!(await Auth.requireAuth())) return;
+
+      try {
+        const userRef = db.collection('users').doc(auth.currentUser.uid);
+        const userDoc = await userRef.get();
+        const bookmarks = userDoc.data()?.bookmarks || {};
+        
+        const isBookmarked = bookmarks[seriesId] === chapterId;
+        
+        if (isBookmarked) {
+          delete bookmarks[seriesId];
+          await userRef.update({ bookmarks });
+          document.getElementById('bookmarkIcon').className = 'far fa-bookmark';
+          showToast('Bookmark removed', 'info');
+        } else {
+          bookmarks[seriesId] = chapterId;
+          await userRef.update({ bookmarks });
+          document.getElementById('bookmarkIcon').className = 'fas fa-bookmark';
+          showToast('Chapter bookmarked!', 'success');
+        }
+      } catch (error) {
+        showToast('Failed to update bookmark', 'error');
+      }
+    }
+
+    function updateCommentFormVisibility() {
+      const isLoggedIn = !!auth.currentUser;
+      document.getElementById('commentForm').style.display = isLoggedIn ? 'flex' : 'none';
+      document.getElementById('guestCommentPrompt').style.display = isLoggedIn ? 'none' : 'flex';
+      
+      if (isLoggedIn) {
+        const avatar = document.getElementById('commentAvatar');
+        if (avatar && Auth.userData?.avatar) {
+          avatar.src = Auth.userData.avatar;
+        }
+      }
+    }
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+      
+      if (e.key === 'ArrowLeft') {
+        const prevBtn = document.getElementById('prevChapterBtn');
+        if (prevBtn.style.display !== 'none') prevBtn.click();
+      }
+      if (e.key === 'ArrowRight') {
+        const nextBtn = document.getElementById('nextChapterBtn');
+        if (nextBtn.style.display !== 'none') nextBtn.click();
+      }
+    });
+  </script>
+  <script src="../js/shared-header.js"></script>
+
+  <!-- ============ REPORT CHAPTER MODAL ============ -->
+  <div class="modal-overlay" id="reportModal"
+       style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;padding:1rem;">
+    <div class="modal" style="background:var(--bg-card,#1a1a1a);border-radius:12px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto;border:1px solid var(--border-color,#2a2a2a);">
+      <div class="modal-header" style="padding:1.25rem 1.25rem 0.75rem;display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;">
+        <div>
+          <h3 style="font-size:1.125rem;font-weight:700;margin:0 0 0.25rem;">Report Chapter Issue</h3>
+          <p id="reportSubtitle" style="margin:0;color:var(--text-muted,#888);font-size:0.875rem;"></p>
+        </div>
+        <button type="button" class="icon-btn" onclick="closeReportModal()" aria-label="Close" style="background:transparent;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <form id="reportForm" class="modal-body" style="padding:0.5rem 1.25rem 1.25rem;" onsubmit="event.preventDefault();submitReport();">
+        <fieldset style="border:none;padding:0;margin:0 0 1rem;">
+          <legend style="font-weight:600;margin-bottom:0.5rem;font-size:0.95rem;">Issue type</legend>
+          <div id="reportReasons" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
+        </fieldset>
+        <label style="display:block;font-weight:600;font-size:0.95rem;margin-bottom:0.35rem;">Additional details
+          <span style="color:var(--text-muted);font-weight:400;">(optional, max 1000 chars)</span>
+        </label>
+        <textarea id="reportDetails" rows="4" maxlength="1000" class="form-input"
+                  style="width:100%;padding:0.65rem;border-radius:8px;background:var(--bg-tertiary,#0d0d0d);color:inherit;border:1px solid var(--border-color,#2a2a2a);resize:vertical;"
+                  placeholder="Anything that helps moderators reproduce the issue..."></textarea>
+        <div id="reportError" style="display:none;color:var(--error,#ef4444);font-size:0.85rem;margin-top:0.5rem;"></div>
+        <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:1rem;flex-wrap:wrap;">
+          <button type="button" class="btn btn-ghost" onclick="closeReportModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="reportSubmitBtn">
+            <i class="fas fa-paper-plane"></i> Submit Report
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // ==================== REPORT CHAPTER ====================
+    const REPORT_REASONS = [
+      { v: 'wrong_chapter', l: 'Wrong Chapter',          d: "Content doesn't match the selected chapter or belongs to another series." },
+      { v: 'broken',        l: 'Broken / Loading Issue', d: 'Images fail to load, load incorrectly, or appear broken.' },
+      { v: 'missing_pages', l: 'Missing Pages',          d: 'One or more pages are missing.' },
+      { v: 'poor_quality',  l: 'Poor Image Quality',     d: 'Images are blurry, stretched, distorted, or unreadable.' },
+      { v: 'duplicate',     l: 'Duplicate Pages',        d: 'The chapter contains repeated pages.' },
+      { v: 'other',         l: 'Other Issue',            d: 'Describe the problem in the details box below.' }
+    ];
+
+    function openReportModal() {
+      if (!auth.currentUser) {
+        showToast('Please log in to report an issue', 'info');
+        window.location.href = AppPath.to('pages/login.html?redirect=') +
+          encodeURIComponent(window.location.pathname + window.location.search);
+        return;
+      }
+      if (!currentChapter || !currentSeries) {
+        showToast('Chapter not ready yet', 'info');
+        return;
+      }
+      document.getElementById('reportSubtitle').textContent =
+        `${currentSeries.title || 'Unknown'} • Chapter ${currentChapter.chapterNumber}`;
+      const wrap = document.getElementById('reportReasons');
+      wrap.innerHTML = REPORT_REASONS.map((r, i) => `
+        <label style="display:flex;gap:0.6rem;align-items:flex-start;padding:0.55rem 0.7rem;border:1px solid var(--border-color,#2a2a2a);border-radius:8px;cursor:pointer;">
+          <input type="radio" name="reportReason" value="${r.v}" ${i === 0 ? 'checked' : ''} style="margin-top:0.25rem;">
+          <span><strong style="display:block;">${r.l}</strong>
+          <span style="color:var(--text-muted);font-size:0.825rem;">${r.d}</span></span>
+        </label>
+      `).join('');
+      document.getElementById('reportDetails').value = '';
+      document.getElementById('reportError').style.display = 'none';
+      const m = document.getElementById('reportModal');
+      m.style.display = 'flex';
+      // CSS .modal-overlay has opacity:0; visibility:hidden by default —
+      // it only becomes visible when the .active class is present.
+      m.classList.add('active');
+      m.style.opacity = '1';
+      m.style.visibility = 'visible';
+      document.body.style.overflow = 'hidden';
+    }
+    function closeReportModal() {
+      const m = document.getElementById('reportModal');
+      m.style.display = 'none';
+      m.classList.remove('active');
+      m.style.opacity = '';
+      m.style.visibility = '';
+      document.body.style.overflow = '';
+    }
+    // Close on backdrop click / Esc
+    document.addEventListener('click', (e) => {
+      if (e.target?.id === 'reportModal') closeReportModal();
+    });
+    document.addEventListener('keydown', (e) => {
+      const m = document.getElementById('reportModal');
+      if (e.key === 'Escape' && m && m.style.display === 'flex') closeReportModal();
+    });
+
+    async function submitReport() {
+      const btn = document.getElementById('reportSubmitBtn');
+      const errEl = document.getElementById('reportError');
+      const reason = document.querySelector('input[name="reportReason"]:checked')?.value;
+      const details = document.getElementById('reportDetails').value.trim();
+      errEl.style.display = 'none';
+      if (!reason) { errEl.textContent = 'Please choose an issue type.'; errEl.style.display = ''; return; }
+
+      btn.disabled = true;
+      const originalHtml = btn.innerHTML;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+      try {
+        await DB.reportChapter({
+          seriesId, seriesTitle: currentSeries?.title || '',
+          chapterId, chapterNumber: currentChapter?.chapterNumber,
+          reason, details
+        });
+        closeReportModal();
+        showToast('Report submitted — thanks for the heads up!', 'success');
+      } catch (e) {
+        errEl.textContent = e.message || 'Could not submit report.';
+        errEl.style.display = '';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+      }
+    }
+
+    // Expose globally so inline handlers always resolve, and attach
+    // delegated listeners as a defensive fallback (shared-header.js can
+    // re-render parts of the page after this script runs).
+    window.openReportModal = openReportModal;
+    window.closeReportModal = closeReportModal;
+    window.submitReport = submitReport;
+    document.addEventListener('click', (e) => {
+      const t = e.target?.closest?.('#reportBtnHeader, #reportBtnFooter, [data-open-report]');
+      if (t) { e.preventDefault(); try { openReportModal(); } catch (err) { console.error('Report modal failed:', err); } }
+    });
+  </script>
+
+  <!-- Floating reader controls: Refresh, Up, Down -->
+  <div class="reader-fab" id="readerFab" aria-label="Reader controls">
+    <button type="button" id="fabRefresh" title="Refresh chapter" aria-label="Refresh chapter">
+      <i class="fas fa-sync-alt"></i>
+    </button>
+    <button type="button" id="fabUp" title="Scroll to top" aria-label="Scroll to top">
+      <i class="fas fa-chevron-up"></i>
+    </button>
+    <button type="button" id="fabDown" title="Scroll to bottom" aria-label="Scroll to bottom">
+      <i class="fas fa-chevron-down"></i>
+    </button>
+  </div>
+
+  <script>
+    // Reader UI toggle: tapping anywhere on the page (outside the reader
+    // header, floating controls, modals, links, and buttons) toggles BOTH
+    // the site header / reader header AND the floating controls together.
+    (function () {
+      const body = document.body;
+
+      function toggleUI() {
+        body.classList.toggle('reader-ui-hidden');
+      }
+
+      document.addEventListener('click', (e) => {
+        const t = e.target;
+        if (!t || !t.closest) return;
+        // Ignore clicks on interactive elements or on the reader chrome itself.
+        if (t.closest('a, button, input, textarea, select, label, [role="button"], [role="dialog"]')) return;
+        if (t.closest('.header, .reader-header, .reader-fab, #adultWarningOverlay, .chapter-picker-panel, .modal, .report-modal')) return;
+        toggleUI();
+      });
+
+      // Floating buttons
+      const fabRefresh = document.getElementById('fabRefresh');
+      const fabUp = document.getElementById('fabUp');
+      const fabDown = document.getElementById('fabDown');
+
+      fabRefresh?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        window.location.reload();
+      });
+      fabUp?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        window.scrollTo({ top: 0, behavior: 'auto' });
+      });
+      fabDown?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'auto' });
+      });
+    })();
+  </script>
+
+</body>
+</html>

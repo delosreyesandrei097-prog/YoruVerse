@@ -1,0 +1,2034 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - YoruVerse</title>
+  <link rel="stylesheet" href="../css/exp.css">
+  <link rel="stylesheet" href="../css/donation.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="manifest" href="../manifest.json">
+  <link rel="icon" type="image/png" href="../images/O.png">
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+</head>
+<body>
+  <div class="loading-screen" id="loadingScreen"><div class="spinner"></div><p>Loading admin...</p></div>
+
+  <div class="admin-layout">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar" id="adminSidebar">
+      <button class="admin-sidebar-close" id="adminSidebarClose" onclick="toggleAdminSidebar()" title="Close Menu">
+        <i class="fas fa-times"></i>
+      </button>
+      <div class="admin-sidebar-logo">
+        <img src="../images/Y.png" alt="YoruVerse" class="logo-text-img">
+      </div>
+      
+      <div class="admin-nav-section">
+        <div class="admin-nav-label">Main</div>
+        <a href="#" class="admin-nav-link active" data-admin-tab="dashboard" onclick="switchTab('dashboard')">
+          <i class="fas fa-chart-line"></i> Dashboard
+        </a>
+        <a href="#" class="admin-nav-link" data-admin-tab="series" onclick="switchTab('series')">
+          <i class="fas fa-book"></i> Series
+        </a>
+        <a href="#" class="admin-nav-link" data-admin-tab="import" onclick="switchTab('import')">
+          <i class="fas fa-file-import"></i> Import Chapter
+        </a>
+        <a href="admin-import-series.html" class="admin-nav-link">
+          <i class="fas fa-layer-group"></i> Import Series
+        </a>
+        <a href="#" class="admin-nav-link" data-admin-tab="users" onclick="switchTab('users')">
+          <i class="fas fa-users"></i> Users
+        </a>
+        <a href="#" class="admin-nav-link" data-admin-tab="titles" onclick="switchTab('titles')">
+          <i class="fas fa-award"></i> User Titles
+        </a>
+        <a href="#" class="admin-nav-link" data-admin-tab="reports" onclick="switchTab('reports')">
+          <i class="fas fa-flag"></i> Reports
+        </a>
+        <a href="#" class="admin-nav-link" data-admin-tab="notifications" onclick="switchTab('notifications')">
+          <i class="fas fa-bell"></i> Send Notification
+        </a>
+        <a href="#" class="admin-nav-link" data-admin-tab="maintenance" onclick="switchTab('maintenance')">
+          <i class="fas fa-screwdriver-wrench"></i> Maintenance Mode
+        </a>
+      </div>
+
+      <div class="admin-nav-section">
+        <div class="admin-nav-label">Quick Links</div>
+        <a href="../index.html" class="admin-nav-link"><i class="fas fa-home"></i> View Site</a>
+        <a href="profile.html" class="admin-nav-link"><i class="fas fa-user"></i> Profile</a>
+        <a href="#" class="admin-nav-link" onclick="Auth.logout(); return false;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+      </div>
+    </aside>
+
+    <!-- Sidebar Overlay (mobile) -->
+    <div class="admin-sidebar-overlay" id="adminSidebarOverlay" onclick="toggleAdminSidebar()"></div>
+
+    <!-- Main Content -->
+    <main class="admin-main">
+      <!-- Mobile Sidebar Toggle -->
+      <button class="admin-sidebar-toggle" id="adminSidebarToggle" onclick="toggleAdminSidebar()" title="Toggle Menu">
+        <i class="fas fa-bars"></i>
+      </button>
+      <!-- Dashboard Tab -->
+      <div id="tab-dashboard" class="admin-tab">
+        <h1 style="font-size: 1.75rem; font-weight: 700; margin-bottom: var(--space-xl);">Dashboard</h1>
+        
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Total Series</div>
+            <div class="stat-value" id="statTotalSeries">0</div>
+            <div class="stat-change positive"><i class="fas fa-arrow-up"></i> <span id="statNewSeries">0</span> new this week</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Total Chapters</div>
+            <div class="stat-value" id="statTotalChapters">0</div>
+            <div class="stat-change positive"><i class="fas fa-arrow-up"></i> Updated today</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Total Users</div>
+            <div class="stat-value" id="statTotalUsers">0</div>
+            <div class="stat-change positive"><i class="fas fa-arrow-up"></i> <span id="statNewUsers">0</span> new today</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Total Comments</div>
+            <div class="stat-value" id="statTotalComments">0</div>
+            <div class="stat-change positive">Active discussions</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Pending Reports</div>
+            <div class="stat-value" id="statPendingReports">0</div>
+            <div class="stat-change"><a href="#" onclick="switchTab('reports'); return false;" style="color:var(--accent-primary);">Review now →</a></div>
+          </div>
+        </div>
+
+
+        <div style="display: grid; grid-template-columns: 1fr; gap: var(--space-xl);">
+          <div class="settings-section">
+            <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: var(--space-lg);">Recent Activity</h3>
+            <div id="recentActivity" style="max-height: 400px; overflow-y: auto;">
+              <div style="display:flex;justify-content:center;padding:2rem;"><div class="spinner spinner-sm"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Series Tab -->
+      <div id="tab-series" class="admin-tab" style="display:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-xl);flex-wrap:wrap;gap:var(--space-md);">
+          <h1 style="font-size: 1.75rem; font-weight: 700;">Manage Series</h1>
+          <button class="btn btn-primary" onclick="openSeriesModal()"><i class="fas fa-plus"></i> Add Series</button>
+        </div>
+
+        <!-- Search bar: filter by series title (partial match, instant) -->
+        <div class="settings-section" style="margin-bottom:var(--space-md);padding:var(--space-md);">
+          <div style="position:relative;">
+            <i class="fas fa-search" style="position:absolute;left:0.85rem;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none;"></i>
+            <input type="text" id="seriesSearchInput" class="form-input"
+              placeholder="Search series by title..."
+              style="width:100%;padding-left:2.4rem;"
+              oninput="filterSeriesList(this.value)"
+              autocomplete="off">
+            <button type="button" id="seriesSearchClear" onclick="clearSeriesSearch()"
+              style="position:absolute;right:0.5rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;display:none;padding:0.25rem 0.5rem;" title="Clear search">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <div id="seriesSearchMeta" style="margin-top:var(--space-sm);font-size:0.8125rem;color:var(--text-muted);display:none;"></div>
+        </div>
+
+        <div class="settings-section" style="padding:0;overflow:hidden;">
+          <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Series</th>
+                <th>Status</th>
+                <th>Chapters</th>
+                <th>Views</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="seriesTableBody">
+              <tr><td colspan="5" style="text-align:center;padding:2rem;"><div class="spinner" style="margin:0 auto;"></div></td></tr>
+            </tbody>
+          </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Import Tab -->
+      <div id="tab-import" class="admin-tab" style="display:none;">
+        <h1 style="font-size: 1.75rem; font-weight: 700; margin-bottom: var(--space-xl);">Import Chapter</h1>
+        
+        <div class="import-tool">
+          <div class="settings-section">
+            <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: var(--space-md);">Chapter URL</h3>
+            <p style="color:var(--text-secondary);margin-bottom:var(--space-lg);">Paste a chapter URL from a supported source to extract and import it.</p>
+            
+            <div class="import-input-group">
+              <select id="importSeriesSelect" class="import-input" style="flex: 0 0 200px;">
+                <option value="">Select Series...</option>
+              </select>
+              <input type="url" id="importUrl" class="import-input" placeholder="https://example.com/manga/chapter-1">
+              <button class="btn btn-primary" id="importBtn" onclick="ImportTool.handleImport()">
+                <i class="fas fa-download"></i> Extract
+              </button>
+            </div>
+
+            <div style="margin-top: var(--space-md); padding: var(--space-md); background: var(--bg-primary); border-radius: var(--radius-md); font-size: 0.8125rem; color: var(--text-muted);">
+              <i class="fas fa-info-circle"></i> <strong>Note:</strong> Source plugins now use automatic proxy fallbacks when a site blocks direct browser requests.
+            </div>
+          </div>
+
+          <!-- Bulk Import -->
+          <div class="settings-section" style="margin-top: var(--space-xl);">
+            <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: var(--space-md);">Bulk Import</h3>
+            <p style="color:var(--text-secondary);margin-bottom:var(--space-lg);">Paste multiple chapter URLs (one per line) to import them all at once. Chapters are processed sequentially.</p>
+            
+            <div class="form-group">
+              <label class="form-label">Chapter URLs (one per line)</label>
+              <textarea id="bulkUrls" class="form-input" rows="6" placeholder="https://asurascans.com/manga/example/chapter-1/&#10;https://asurascans.com/manga/example/chapter-2/&#10;https://asurascans.com/manga/example/chapter-3/"></textarea>
+            </div>
+            <div style="display:flex;gap:var(--space-md);margin-top:var(--space-md);">
+              <button class="btn btn-primary" id="bulkImportBtn" onclick="ImportTool.handleBulkImport()">
+                <i class="fas fa-file-import"></i> Bulk Import
+              </button>
+              <button class="btn btn-ghost" id="bulkCancelBtn" onclick="ImportTool.cancelBulkImport()" style="display:none;">
+                Cancel
+              </button>
+            </div>
+
+            <!-- Bulk Import Progress -->
+            <div id="bulkImportProgress" class="hidden" style="margin-top: var(--space-lg);">
+              <div style="background:var(--bg-tertiary);border-radius:var(--radius-md);overflow:hidden;height:8px;margin-bottom:var(--space-sm);">
+                <div id="bulkProgressFill" style="height:100%;background:var(--accent-gradient);width:0%;transition:width 300ms ease;"></div>
+              </div>
+              <p id="bulkProgressText" style="font-size:0.8125rem;color:var(--text-muted);">Processing 0/0...</p>
+            </div>
+
+            <!-- Bulk Import Results -->
+            <div id="bulkImportResults" class="hidden" style="margin-top:var(--space-md);max-height:300px;overflow-y:auto;background:var(--bg-primary);border-radius:var(--radius-md);padding:var(--space-sm);">
+            </div>
+          </div>
+
+          <!-- Supported Sources -->
+          <div class="settings-section" style="margin-top: var(--space-xl);">
+            <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: var(--space-md);">Supported Sources</h3>
+            <div id="supportedSourcesList" style="display:flex;flex-wrap:wrap;gap:var(--space-sm);">
+              <span style="color:var(--text-muted);font-size:0.875rem;">Loading sources...</span>
+            </div>
+          </div>
+
+          <!-- Loading State -->
+          <div id="importLoading" class="hidden" style="text-align:center;padding:2rem;">
+            <div class="spinner" style="margin:0 auto var(--space-md);"></div>
+            <p style="color:var(--text-secondary);">Extracting chapter data...</p>
+          </div>
+
+          <!-- Preview -->
+          <div id="importPreview" class="hidden">
+            <div class="import-preview">
+              <h3 class="import-preview-title">Preview: <span id="previewTitle">Unknown</span></h3>
+              <p style="color:var(--text-secondary);margin-bottom:var(--space-lg);">
+                <span id="previewChapter"></span> - 
+                <span id="previewImageCount"></span>
+              </p>
+              <div class="import-preview-images" id="previewImages"></div>
+              <div style="display:flex;gap:var(--space-md);margin-top:var(--space-lg);">
+                <button class="btn btn-primary btn-lg" id="confirmImportBtn" onclick="ImportTool.confirmImport()">
+                  <i class="fas fa-check"></i> Confirm Import
+                </button>
+                <button class="btn btn-ghost btn-lg" id="cancelImportBtn" onclick="ImportTool.resetImport()">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Manual Import -->
+        <div style="margin-top: var(--space-2xl);">
+          <div class="settings-section">
+            <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: var(--space-md);">Manual Import</h3>
+            <p style="color:var(--text-secondary);margin-bottom:var(--space-lg);">Manually add chapter data if automatic extraction fails.</p>
+            <form id="manualImportForm" onsubmit="return false;">
+              <div class="form-grid-2col" style="margin-bottom:var(--space-lg);">
+                <div class="form-group">
+                  <label class="form-label">Series</label>
+                  <select id="manualSeries" class="form-input" required><option value="">Select...</option></select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Chapter Number</label>
+                  <input type="number" id="manualChapterNum" class="form-input" step="0.1" required>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Chapter Title (optional)</label>
+                <input type="text" id="manualChapterTitle" class="form-input">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Image URLs (one per line)</label>
+                <textarea id="manualImageUrls" class="form-input" rows="6" placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg" required></textarea>
+              </div>
+              <button type="button" class="btn btn-primary" onclick="handleManualImport()">
+                <i class="fas fa-plus"></i> Add Chapter
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Users Tab -->
+      <div id="tab-users" class="admin-tab" style="display:none;">
+        <div style="display:flex;flex-wrap:wrap;gap:var(--space-md);align-items:center;justify-content:space-between;margin-bottom:var(--space-lg);">
+          <h1 style="font-size:1.75rem;font-weight:700;margin:0;">Manage Users</h1>
+          <div style="display:flex;gap:var(--space-sm);flex-wrap:wrap;align-items:center;">
+            <input
+              type="search"
+              id="usersSearchInput"
+              class="form-input"
+              placeholder="Search username or email…"
+              style="min-width:220px;"
+              oninput="renderUsersTable()"
+              autocomplete="off">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="loadUsersList()" title="Refresh">
+              <i class="fas fa-sync"></i>
+            </button>
+          </div>
+        </div>
+        <div id="usersTableBody" class="user-cards-grid">
+          <div style="grid-column:1/-1;text-align:center;padding:2rem;"><div class="spinner" style="margin:0 auto;"></div></div>
+        </div>
+      </div>
+
+      <style>
+        .user-cards-grid {
+          display:grid;
+          grid-template-columns:repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+          gap:var(--space-md);
+        }
+        .user-card {
+          background:var(--bg-secondary, #161622);
+          border:1px solid var(--bg-hover, #2a2a3a);
+          border-radius:var(--radius-lg, 12px);
+          padding:var(--space-md);
+          display:flex;
+          flex-direction:column;
+          gap:var(--space-sm);
+          min-width:0;
+        }
+        .user-card__head {
+          display:flex; align-items:center; gap:var(--space-sm); min-width:0;
+        }
+        .user-card__avatar {
+          width:48px; height:48px; border-radius:50%; object-fit:cover; flex-shrink:0;
+          background:var(--bg-tertiary,#1f1f2e);
+        }
+        .user-card__name {
+          font-weight:700; font-size:1rem; min-width:0;
+          overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+        }
+        .user-card__meta {
+          font-size:0.8125rem; color:var(--text-muted,#8a8aa0);
+          display:flex; flex-wrap:wrap; gap:0.35rem 0.75rem;
+          word-break:break-word;
+        }
+        .user-card__email {
+          font-size:0.85rem; color:var(--text-secondary,#b8b8c8);
+          overflow-wrap:anywhere; word-break:break-word;
+        }
+        .user-card__row {
+          display:flex; align-items:center; justify-content:space-between;
+          gap:var(--space-sm); flex-wrap:wrap;
+        }
+        .user-card__stats {
+          display:flex; gap:var(--space-sm); flex-wrap:wrap;
+          font-size:0.8125rem;
+        }
+        .user-card__stat {
+          background:var(--bg-tertiary,#1f1f2e);
+          padding:0.25rem 0.6rem;
+          border-radius:var(--radius-md,8px);
+        }
+        .user-card__actions {
+          display:flex; flex-wrap:wrap; gap:0.35rem;
+          padding-top:var(--space-sm);
+          border-top:1px solid var(--bg-hover,#2a2a3a);
+        }
+        .user-card__actions .btn { white-space:nowrap; }
+      </style>
+
+
+
+      <!-- User Titles Tab -->
+      <div id="tab-titles" class="admin-tab" style="display:none;">
+        <h1 style="font-size: 1.75rem; font-weight: 700; margin-bottom: var(--space-md);">User Title Management</h1>
+        <p style="color:var(--text-secondary);max-width:680px;margin-bottom:var(--space-xl);">
+          Assign, extend, or remove titles (DONATOR, VIP, VERIFIED, etc.) for any user. DONATOR and VIP expire automatically based on the configured duration.
+        </p>
+
+        <div class="settings-section" style="max-width:680px;margin-bottom:var(--space-xl);">
+          <h3 style="margin-top:0;">Donation settings</h3>
+          <div class="form-group">
+            <label class="form-label">DONATOR / VIP membership duration (days)</label>
+            <input type="number" id="donatorDurationInput" min="1" max="3650" class="form-input" style="max-width:200px;" placeholder="30">
+          </div>
+          <div class="form-group">
+            <label class="form-label">PayPal link</label>
+            <input type="url" id="donatorPaypalInput" class="form-input" placeholder="https://www.paypal.me/YoruVerse">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Verification contact email</label>
+            <input type="email" id="donatorEmailInput" class="form-input" placeholder="YoruVerse6@gmail.com">
+          </div>
+          <button type="button" class="btn btn-primary" onclick="saveDonationConfig()">
+            <i class="fas fa-save"></i> Save settings
+          </button>
+        </div>
+
+        <div class="settings-section" style="max-width:680px;margin-bottom:var(--space-xl);">
+          <h3 style="margin-top:0;">Manage a user&apos;s titles</h3>
+          <div class="form-group">
+            <label class="form-label">Search by username or email</label>
+            <div style="display:flex;gap:var(--space-sm);flex-wrap:wrap;">
+              <input type="text" id="titleUserSearch" class="form-input" placeholder="Username or email (case-insensitive)" style="flex:1;min-width:200px;" onkeydown="if(event.key==='Enter'){event.preventDefault();lookupTitleUser();}">
+
+              <button type="button" class="btn btn-primary" onclick="lookupTitleUser()">
+                <i class="fas fa-search"></i> Find
+              </button>
+            </div>
+          </div>
+          <div id="titleUserPanel" style="display:none;"></div>
+        </div>
+
+        <div class="settings-section" style="max-width:680px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:var(--space-md);flex-wrap:wrap;margin-bottom:var(--space-md);">
+            <h3 style="margin:0;">DONATOR users</h3>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="loadDonatorList()">
+              <i class="fas fa-sync"></i> Refresh
+            </button>
+          </div>
+          <p style="color:var(--text-secondary);font-size:0.85rem;margin:0 0 var(--space-md);">
+            All users who currently have an active DONATOR title. Click a row to manage that user's titles.
+          </p>
+          <div id="donatorListPanel"><div class="spinner" style="margin:1rem auto;"></div></div>
+        </div>
+      </div>
+
+      <!-- Reports Tab -->
+      <div id="tab-reports" class="admin-tab" style="display:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-xl);flex-wrap:wrap;gap:var(--space-md);">
+          <h1 style="font-size: 1.75rem; font-weight: 700;">Reports</h1>
+          <select id="reportsFilter" class="form-input" style="width:auto;" onchange="loadReports()">
+            <option value="pending">Pending</option>
+            <option value="under_review">Under Review</option>
+            <option value="">All</option>
+            <option value="resolved">Resolved</option>
+            <option value="rejected">Rejected</option>
+            <option value="dismissed">Dismissed</option>
+          </select>
+        </div>
+        <div class="settings-section" style="padding:0;overflow:hidden;">
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Reporter</th>
+                  <th>Reported User</th>
+                  <th>Where</th>
+                  <th>Reason</th>
+                  <th>Content</th>
+                  <th>When</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="reportsTableBody">
+                <tr><td colspan="8" style="text-align:center;padding:2rem;"><div class="spinner" style="margin:0 auto;"></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notifications Tab -->
+      <div id="tab-notifications" class="admin-tab" style="display:none;">
+
+        <h1 style="font-size: 1.75rem; font-weight: 700; margin-bottom: var(--space-xl);">Send Notification</h1>
+        <div class="settings-section" style="max-width: 600px;">
+          <form id="notificationForm" onsubmit="return false;">
+            <div class="form-group">
+              <label class="form-label">Target</label>
+              <select id="notifTarget" class="form-input">
+                <option value="all">All Users</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Title</label>
+              <input type="text" id="notifTitle" class="form-input" placeholder="Notification title" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Message</label>
+              <textarea id="notifMessage" class="form-input" rows="4" placeholder="Notification message" required></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Type</label>
+              <select id="notifType" class="form-input">
+                <option value="announcement">Announcement</option>
+                <option value="new_chapter">New Chapter</option>
+                <option value="update">Site Update</option>
+              </select>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="sendNotification()">
+              <i class="fas fa-paper-plane"></i> Send Notification
+            </button>
+          </form>
+        </div>
+
+        <!-- Manage Announcements (Admin only) -->
+        <h2 style="font-size: 1.25rem; font-weight: 700; margin: var(--space-2xl) 0 var(--space-md);">
+          <i class="fas fa-bullhorn"></i> Manage Announcements
+        </h2>
+        <p style="color: var(--text-secondary); margin-bottom: var(--space-md); max-width: 600px;">
+          Delete outdated, duplicate, or mistakenly-sent announcements. Deletion is permanent and removes the announcement from every user's notifications page.
+        </p>
+        <div class="settings-section" style="max-width: 800px;">
+          <div style="display:flex; gap:8px; margin-bottom: var(--space-md); flex-wrap:wrap;">
+            <button class="btn btn-ghost btn-sm" onclick="loadAnnouncementsList()"><i class="fas fa-sync"></i> Refresh</button>
+            <button class="btn btn-ghost btn-sm" id="annBulkDeleteBtn" onclick="bulkDeleteAnnouncements()" disabled style="color:#e74c3c;"><i class="fas fa-trash"></i> Delete Selected (<span id="annSelectedCount">0</span>)</button>
+          </div>
+          <div id="announcementsList" style="display:flex; flex-direction:column; gap:8px;">
+            <div style="color:var(--text-secondary); font-size:0.9rem;">Loading announcements...</div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- Maintenance Mode Tab -->
+      <div id="tab-maintenance" class="admin-tab" style="display:none;">
+        <h1 style="font-size: 1.75rem; font-weight: 700; margin-bottom: var(--space-md);">Maintenance Mode</h1>
+        <p style="color: var(--text-secondary); margin-bottom: var(--space-xl); max-width:600px;">
+          When enabled, all readers are redirected to a maintenance page. Admins and moderators retain full access.
+        </p>
+        <div class="settings-section" style="max-width: 600px;">
+          <div class="form-group" style="display:flex; align-items:center; justify-content:space-between; gap: var(--space-md);">
+            <div>
+              <div style="font-weight:700;">Enable Maintenance Mode</div>
+              <div id="maintenanceStatusLabel" style="color: var(--text-secondary); font-size:0.875rem;">Loading...</div>
+            </div>
+            <label class="switch" style="position:relative; display:inline-block; width:54px; height:30px;">
+              <input type="checkbox" id="maintenanceToggle" style="opacity:0; width:0; height:0;">
+              <span id="maintenanceSlider" style="position:absolute; cursor:pointer; inset:0; background: var(--bg-tertiary); border-radius:999px; transition:.2s;">
+                <span id="maintenanceKnob" style="position:absolute; height:24px; width:24px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s;"></span>
+              </span>
+            </label>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Maintenance Message (optional)</label>
+            <textarea id="maintenanceMessage" class="form-input" rows="3" placeholder="We are currently performing maintenance..."></textarea>
+          </div>
+          <button type="button" class="btn btn-primary" onclick="saveMaintenanceMode()">
+            <i class="fas fa-save"></i> Save Changes
+          </button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Series Modal -->
+  <div class="modal-overlay" id="seriesModal">
+    <div class="modal" style="max-width: 700px;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="seriesModalTitle">Add Series</h3>
+        <button class="modal-close" onclick="UI.closeModal('seriesModal')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="seriesForm" onsubmit="return false;">
+          <input type="hidden" id="seriesEditId">
+          <div class="form-grid-2col">
+            <div class="form-group">
+              <label class="form-label">Title *</label>
+              <input type="text" id="formTitle" class="form-input" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Alternative Titles</label>
+              <input type="text" id="formAltTitles" class="form-input" placeholder="Comma-separated">
+            </div>
+          </div>
+          <div class="form-grid-2col">
+            <div class="form-group">
+              <label class="form-label">Author</label>
+              <input type="text" id="formAuthor" class="form-input">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Artist</label>
+              <input type="text" id="formArtist" class="form-input">
+            </div>
+          </div>
+          <div class="form-grid-3col">
+            <div class="form-group">
+              <label class="form-label">Status</label>
+              <select id="formStatus" class="form-input">
+                <option value="Ongoing">Ongoing</option>
+                <option value="Completed">Completed</option>
+                <option value="Hiatus">Hiatus</option>
+                <option value="Dropped">Dropped</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Release Year</label>
+              <input type="number" id="formYear" class="form-input" min="1900" max="2099">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Genres (comma-separated)</label>
+              <input type="text" id="formGenres" class="form-input" placeholder="Action, Fantasy">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Cover Image URL</label>
+            <input type="url" id="formCover" class="form-input" placeholder="https://example.com/cover.jpg">
+          </div>
+
+          <!-- Banner Image management -->
+          <div class="form-group">
+            <label class="form-label">Banner Image</label>
+            <input type="url" id="formBanner" class="form-input" placeholder="https://example.com/banner.jpg"
+                   style="margin-bottom:8px;">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+              <input type="file" id="formBannerFile" accept="image/*" style="display:none;">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('formBannerFile').click()">
+                <i class="fas fa-upload"></i> Upload Image
+              </button>
+              <button type="button" class="btn btn-ghost btn-sm" id="formBannerRemoveBtn"
+                      onclick="removeBannerImage()" style="display:none;">
+                <i class="fas fa-trash"></i> Remove Banner
+              </button>
+              <span id="formBannerUploadStatus" style="font-size:0.85rem;opacity:0.75;"></span>
+            </div>
+            <div id="formBannerPreviewWrap"
+                 style="display:none;border:1px solid var(--border, #2a2a3a);border-radius:8px;overflow:hidden;background:#0d0d14;">
+              <img id="formBannerPreview" alt="Banner preview"
+                   style="display:block;width:100%;max-height:180px;object-fit:cover;">
+            </div>
+            <p style="font-size:0.8rem;opacity:0.6;margin-top:6px;">
+              Wide image (e.g. 1600×400). Shown at the top of the series page on desktop and mobile.
+            </p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Synopsis</label>
+            <textarea id="formSynopsis" class="form-input" rows="4"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="UI.closeModal('seriesModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveSeries()">Save Series</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manage Chapters Modal -->
+  <div class="modal-overlay" id="chaptersModal">
+    <div class="modal" style="max-width: 760px;">
+      <div class="modal-header">
+        <h3 class="modal-title">
+          <i class="fas fa-list-ol"></i>
+          Manage Chapters
+          <span id="chaptersModalSeriesTitle" style="font-weight:400;color:var(--text-muted);"></span>
+        </h3>
+        <button class="modal-close" onclick="UI.closeModal('chaptersModal')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div id="chaptersToolbar"
+             style="display:flex;flex-wrap:wrap;gap:var(--space-sm);align-items:center;justify-content:space-between;margin-bottom:var(--space-md);">
+          <label style="display:flex;align-items:center;gap:var(--space-xs);font-size:0.875rem;cursor:pointer;">
+            <input type="checkbox" id="chaptersSelectAll" onclick="toggleSelectAllChapters(this.checked)">
+            Select all
+          </label>
+          <div style="display:flex;gap:var(--space-sm);flex-wrap:wrap;">
+            <span id="chaptersSelectionInfo" style="align-self:center;font-size:0.8125rem;color:var(--text-muted);">0 selected</span>
+            <button class="btn btn-ghost btn-sm" onclick="reimportSelectedChapters()" id="chaptersReimportBtn" disabled>
+              <i class="fas fa-redo"></i> Re-import
+            </button>
+            <button class="btn btn-ghost btn-sm" style="color:var(--error);" id="chaptersBulkDeleteBtn"
+                    onclick="bulkDeleteChapters()" disabled>
+              <i class="fas fa-trash-alt"></i> Delete selected
+            </button>
+          </div>
+        </div>
+        <div id="chaptersList"
+             style="max-height:55vh;overflow-y:auto;border:1px solid var(--bg-tertiary);border-radius:var(--radius-md);">
+          <div style="display:flex;justify-content:center;padding:2rem;"><div class="spinner"></div></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="UI.closeModal('chaptersModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+
+  <script src="../js/path-utils.js"></script>
+  <script src="../js/firebase-config.js"></script>
+  <script src="../js/ui.js"></script>
+  <script src="../js/auth.js"></script>
+  <script src="../js/db.js"></script>
+  <script src="../js/exp-system.js"></script>
+  <script src="../js/donation.js"></script>
+  <script src="../js/source-config.js"></script>
+  <script src="../sources/source-vortexscans.js"></script>
+  <script src="../sources/source-hivetoons.js"></script>
+  <script src="../sources/source-roliascan.js"></script>
+  <script src="../sources/source-madarascans.js"></script>
+  <script src="../sources/source-utoon.js"></script>
+  <script src="../sources/source-violetscans.js"></script>
+  <script src="../sources/source-kingofshojo.js"></script>
+  <script src="../sources/source-templetoons.js"></script>
+  <script src="../sources/source-qimanga.js"></script>
+  <script src="../sources/source-mangakatana.js"></script>
+  <script src="../sources/source-genztoons.js"></script>
+  <script src="../sources/source-flamecomics.js"></script>
+  <script src="../sources/source-template.js"></script>
+  <script src="../sources/source-example.js"></script>
+  <script src="../js/source-registry.js"></script>
+  <script src="../js/import-tool.js"></script>
+  <script>
+    UI.init();
+
+    let currentSeries = [];
+    let currentUsers = [];
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Wait for auth
+      window.addEventListener('authStateChanged', async (e) => {
+        if (!e.detail.user) {
+          window.location.href = AppPath.to('pages/login.html?redirect=') + encodeURIComponent(window.location.pathname);
+          return;
+        }
+
+        // Check admin role
+        const userData = e.detail.userData;
+        if (!userData || (userData.role !== 'admin' && userData.role !== 'moderator')) {
+          showToast('Access denied. Admin only.', 'error');
+          window.location.href = '../index.html';
+          return;
+        }
+
+        setTimeout(() => document.getElementById('loadingScreen').classList.add('hidden'), 500);
+
+        // Initialize
+        loadDashboardStats();
+        loadSeriesList();
+        loadUsersList();
+        loadSeriesOptions();
+        loadSupportedSources();
+
+        // Keep the dashboard live: re-pull the stats counters every 30s so
+        // new registrations, chapter imports, comments and reports show up
+        // without the admin having to refresh the page manually.
+        setInterval(() => {
+          const dashEl = document.getElementById('tab-dashboard');
+          if (dashEl && dashEl.style.display !== 'none') loadDashboardStats();
+        }, 30000);
+      });
+    });
+
+    function toggleAdminSidebar() {
+      const sidebar = document.getElementById('adminSidebar');
+      const overlay = document.getElementById('adminSidebarOverlay');
+      sidebar.classList.toggle('active');
+      overlay.classList.toggle('active');
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('.admin-tab').forEach(t => t.style.display = 'none');
+      document.querySelectorAll('[data-admin-tab]').forEach(l => l.classList.remove('active'));
+      
+      document.getElementById(`tab-${tab}`).style.display = 'block';
+      document.querySelector(`[data-admin-tab="${tab}"]`)?.classList.add('active');
+
+      // Close sidebar on mobile after tab switch
+      const sidebar = document.getElementById('adminSidebar');
+      const overlay = document.getElementById('adminSidebarOverlay');
+      if (window.innerWidth < 1024 && sidebar.classList.contains('active')) {
+        sidebar.classList.remove('active');
+        overlay.classList.remove('active');
+      }
+
+      if (tab === 'dashboard') loadDashboardStats();
+      if (tab === 'series') loadSeriesList();
+      if (tab === 'users') loadUsersList();
+      if (tab === 'reports') loadReports();
+      if (tab === 'maintenance') loadMaintenanceMode();
+      if (tab === 'titles') { loadTitleSettings(); loadDonatorList(); }
+      if (tab === 'notifications') loadAnnouncementsList();
+    }
+
+    // ==================== MANAGE ANNOUNCEMENTS ====================
+    // Admin-only panel that lists every site-wide announcement so staff can
+    // remove outdated / duplicate / mistakenly-sent ones. Firestore Rules
+    // enforce admin-only delete on the notifications collection.
+    let _adminAnnouncements = [];
+    const _adminAnnSelected = new Set();
+
+    function _annEscape(s) {
+      return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    async function loadAnnouncementsList() {
+      const container = document.getElementById('announcementsList');
+      if (!container) return;
+      container.innerHTML = '<div style="color:var(--text-secondary); font-size:0.9rem;">Loading announcements...</div>';
+      try {
+        _adminAnnouncements = await DB.getAllAnnouncements(200);
+        _adminAnnSelected.clear();
+        renderAnnouncementsList();
+      } catch (e) {
+        container.innerHTML = `<div style="color:#e74c3c;">Failed to load announcements: ${_annEscape(e.message || '')}</div>`;
+      }
+    }
+
+    function renderAnnouncementsList() {
+      const container = document.getElementById('announcementsList');
+      if (!container) return;
+      if (!_adminAnnouncements.length) {
+        container.innerHTML = '<div style="color:var(--text-secondary); font-size:0.9rem; padding:var(--space-md);">No announcements yet.</div>';
+        _updateAnnBulkBtn();
+        return;
+      }
+      container.innerHTML = _adminAnnouncements.map(a => {
+        const date = a.createdAt?.toDate?.() ? a.createdAt.toDate() : null;
+        const dateStr = date ? date.toLocaleString() : '';
+        const checked = _adminAnnSelected.has(a.id) ? 'checked' : '';
+        const msg = a.message || '';
+        return `
+          <div style="display:flex; align-items:flex-start; gap:12px; padding:12px; background:var(--bg-secondary); border:1px solid var(--border-color, rgba(255,255,255,0.06)); border-radius:10px;">
+            <input type="checkbox" ${checked} onchange="toggleAnnSelected('${a.id}', this.checked)" style="margin-top:4px;">
+            <div style="flex:1; min-width:0;">
+              <div style="font-weight:700; margin-bottom:4px;">${_annEscape(a.title || '(untitled)')}</div>
+              <div style="color:var(--text-secondary); font-size:0.85rem; margin-bottom:6px; word-break:break-word; white-space:pre-wrap;">${_annEscape(msg.slice(0, 240))}${msg.length > 240 ? '…' : ''}</div>
+              <div style="color:var(--text-secondary); font-size:0.75rem;">${_annEscape(a.type || 'announcement')} &middot; ${_annEscape(dateStr)}${a.postedByName ? ' &middot; by ' + _annEscape(a.postedByName) : ''}${a.editedAt ? ' &middot; edited' : ''}</div>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="deleteAnnouncement('${a.id}')" title="Delete announcement" style="color:#e74c3c;"><i class="fas fa-trash"></i></button>
+          </div>`;
+      }).join('');
+      _updateAnnBulkBtn();
+    }
+
+    function toggleAnnSelected(id, checked) {
+      if (checked) _adminAnnSelected.add(id); else _adminAnnSelected.delete(id);
+      _updateAnnBulkBtn();
+    }
+
+    function _updateAnnBulkBtn() {
+      const btn = document.getElementById('annBulkDeleteBtn');
+      const cnt = document.getElementById('annSelectedCount');
+      if (!btn || !cnt) return;
+      cnt.textContent = _adminAnnSelected.size;
+      btn.disabled = _adminAnnSelected.size === 0;
+    }
+
+    async function deleteAnnouncement(id) {
+      const a = _adminAnnouncements.find(x => x.id === id);
+      const label = a ? (a.title || 'this announcement') : 'this announcement';
+      if (!confirm(`Delete "${label}"? This permanently removes it from every user's notifications. This cannot be undone.`)) return;
+      try {
+        await DB.deleteNotification(id);
+        _adminAnnouncements = _adminAnnouncements.filter(x => x.id !== id);
+        _adminAnnSelected.delete(id);
+        renderAnnouncementsList();
+        showToast('Announcement deleted', 'success');
+      } catch (e) {
+        showToast(e.message || 'Failed to delete announcement', 'error');
+      }
+    }
+
+    async function bulkDeleteAnnouncements() {
+      const ids = Array.from(_adminAnnSelected);
+      if (!ids.length) return;
+      if (!confirm(`Delete ${ids.length} selected announcement(s)? This cannot be undone.`)) return;
+      try {
+        const n = await DB.deleteNotifications(ids);
+        _adminAnnouncements = _adminAnnouncements.filter(x => !_adminAnnSelected.has(x.id));
+        _adminAnnSelected.clear();
+        renderAnnouncementsList();
+        showToast(`${n} announcement(s) deleted`, 'success');
+      } catch (e) {
+        showToast(e.message || 'Failed to delete announcements', 'error');
+      }
+    }
+
+    async function loadMaintenanceMode() {
+      try {
+        const m = await DB.getMaintenanceMode();
+        const cb = document.getElementById('maintenanceToggle');
+        const slider = document.getElementById('maintenanceSlider');
+        const knob = document.getElementById('maintenanceKnob');
+        const label = document.getElementById('maintenanceStatusLabel');
+        cb.checked = !!m.enabled;
+        document.getElementById('maintenanceMessage').value = m.message || '';
+        const paint = () => {
+          const on = cb.checked;
+          slider.style.background = on ? 'var(--accent-primary, #a78bfa)' : 'var(--bg-tertiary)';
+          knob.style.left = on ? '27px' : '3px';
+          label.textContent = on ? 'Currently ENABLED — readers are redirected.' : 'Currently disabled — site is live.';
+        };
+        paint();
+        cb.onchange = paint;
+      } catch (e) {
+        showToast('Failed to load maintenance settings', 'error');
+      }
+    }
+
+    async function saveMaintenanceMode() {
+      const enabled = document.getElementById('maintenanceToggle').checked;
+      const message = document.getElementById('maintenanceMessage').value.trim();
+      try {
+        await DB.setMaintenanceMode(enabled, message);
+        showToast(enabled ? 'Maintenance mode enabled' : 'Maintenance mode disabled', 'success');
+        loadMaintenanceMode();
+      } catch (e) {
+        showToast('Error: ' + e.message, 'error');
+      }
+    }
+
+    function escapeForAttr(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => (
+        { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]
+      ));
+    }
+
+    // Build a URL that opens the page where the reported content lives,
+    // with a highlight param so the target page can scroll to + flash it.
+    function buildReportTargetUrl(r) {
+      const t = r.contentType || r.type || 'comment';
+      const seriesId = r.seriesId || (r.series && r.series.id) || '';
+      const chapterId = r.chapterId || '';
+      if (t === 'review' || t === 'reviewReply') {
+        if (!seriesId) return null;
+        return `series.html?id=${encodeURIComponent(seriesId)}&reviewId=${encodeURIComponent(r.contentId || r.targetId || '')}#reviews`;
+      }
+      if (t === 'comment' || t === 'commentReply') {
+        if (chapterId && seriesId) {
+          return `chapter.html?series=${encodeURIComponent(seriesId)}&chapter=${encodeURIComponent(chapterId)}&commentId=${encodeURIComponent(r.contentId || r.commentId || '')}#comments`;
+        }
+        if (seriesId) return `series.html?id=${encodeURIComponent(seriesId)}`;
+      }
+      if (t === 'chapter' && seriesId && chapterId) {
+        return `chapter.html?series=${encodeURIComponent(seriesId)}&chapter=${encodeURIComponent(chapterId)}`;
+      }
+      return null;
+    }
+
+    async function loadReports() {
+      const tbody = document.getElementById('reportsTableBody');
+      if (!tbody) return;
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;"><div class="spinner" style="margin:0 auto;"></div></td></tr>';
+      try {
+        const filter = document.getElementById('reportsFilter')?.value || 'pending';
+        const reports = await DB.getReports({ status: filter || null, limit: 200 });
+        if (!reports.length) {
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">No reports.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = reports.map(r => {
+          const esc = escapeForAttr;
+          const when = r.reportedAt?.toDate?.() ? r.reportedAt.toDate().toLocaleString()
+                    : (r.timestamp?.toDate?.() ? r.timestamp.toDate().toLocaleString() : '—');
+          const snippet = esc(r.snippet || '');
+          const parentSnippet = esc(r.parentSnippet || '');
+          const reason = esc(r.reason || '');
+          const status = r.status || 'pending';
+          const typeLabel = ({
+            review: 'Review', reviewReply: 'Review reply',
+            comment: 'Comment', commentReply: 'Comment reply',
+            chapter: 'Chapter issue'
+          })[r.contentType || r.type] || (r.contentType || r.type || 'item');
+          const where = `
+            <div><strong>${typeLabel}</strong></div>
+            ${r.seriesTitle ? `<div style="color:var(--text-muted);font-size:.8rem;">${esc(r.seriesTitle)}${r.chapterNumber != null ? ` · Ch. ${esc(r.chapterNumber)}` : ''}</div>` : ''}`;
+          const targetUrl = buildReportTargetUrl(r);
+          const openBtn = targetUrl
+            ? `<a class="btn btn-sm btn-primary" href="${esc(targetUrl)}" target="_blank" rel="noopener" title="Open the reported content"><i class="fas fa-external-link-alt"></i> Open</a>`
+            : '';
+          const warnBtn = r.authorId
+            ? `<button class="btn btn-sm btn-ghost" onclick="openWarnUserDialog('${esc(r.authorId)}','${esc(r.authorName || '')}')" title="Warn the reported user"><i class="fas fa-exclamation-triangle"></i> Warn</button>`
+            : '';
+          return `
+            <tr>
+              <td>${esc(r.reporterUsername || r.reportedBy || '—')}</td>
+              <td>${esc(r.authorName || r.authorId || '—')}</td>
+              <td style="max-width:220px;font-size:.85rem;">${where}</td>
+              <td style="max-width:200px;">${reason}</td>
+              <td style="max-width:320px;color:var(--text-muted);font-size:.85rem;">
+                ${parentSnippet ? `<div style="opacity:.7;font-style:italic;border-left:2px solid var(--bg-tertiary);padding-left:.5rem;margin-bottom:.25rem;">In reply to: ${parentSnippet}</div>` : ''}
+                <div>${snippet || '<em>(no preview)</em>'}</div>
+              </td>
+              <td>${when}</td>
+              <td><span class="badge badge-${status}">${status}</span></td>
+              <td style="white-space:nowrap;display:flex;flex-wrap:wrap;gap:.25rem;">
+                ${openBtn}
+                ${warnBtn}
+                ${(status === 'pending' || status === 'under_review') ? `
+                  ${status === 'pending' ? `<button class="btn btn-sm btn-ghost" onclick="handleReportAction('${esc(r.id)}','under_review')">Review</button>` : ''}
+                  <button class="btn btn-sm btn-primary" onclick="handleReportAction('${esc(r.id)}','resolved')">Resolve</button>
+                  <button class="btn btn-sm btn-ghost" onclick="handleReportAction('${esc(r.id)}','rejected')">Reject</button>
+                ` : ''}
+              </td>
+            </tr>`;
+        }).join('');
+      } catch (e) {
+        console.error(e);
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--danger);">Failed to load reports.</td></tr>';
+      }
+    }
+
+    async function handleReportAction(id, status) {
+      try {
+        await DB.updateReportStatus(id, status);
+        showToast(`Report ${status}`, 'success');
+        loadReports();
+        loadDashboardStats();
+      } catch (e) {
+        showToast('Action failed: ' + e.message, 'error');
+      }
+    }
+
+    async function loadDashboardStats() {
+      try {
+        const stats = await DB.getAdminStats();
+        document.getElementById('statTotalSeries').textContent = stats.totalSeries;
+        document.getElementById('statTotalChapters').textContent = stats.totalChapters;
+        document.getElementById('statTotalUsers').textContent = stats.totalUsers;
+        document.getElementById('statTotalComments').textContent = stats.totalComments;
+        document.getElementById('statNewUsers').textContent = stats.newUsersToday;
+
+        // Pending reports count for the dashboard tile
+        try {
+          const pending = await DB.getReports({ status: 'pending', limit: 500 });
+          const el = document.getElementById('statPendingReports');
+          if (el) el.textContent = pending.length;
+        } catch (_) { /* non-fatal */ }
+
+
+        const activity = await DB.getRecentActivity(20);
+        const container = document.getElementById('recentActivity');
+        
+        if (activity.length === 0) {
+          container.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:1rem;">No recent activity</p>';
+          return;
+        }
+
+        container.innerHTML = activity.map(a => `
+          <div style="display:flex;align-items:center;gap:var(--space-md);padding:var(--space-sm) 0;border-bottom:1px solid var(--bg-tertiary);">
+            <div style="width:32px;height:32px;background:var(--bg-tertiary);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:0.75rem;">
+              <i class="fas fa-${a.type === 'chapter_added' ? 'book' : a.type === 'user_registered' ? 'user-plus' : 'comment'}"></i>
+            </div>
+            <div style="flex:1;">
+              <div style="font-size:0.875rem;">${a.description}</div>
+              <div style="font-size:0.75rem;color:var(--text-muted);">
+                ${a.timestamp?.toDate?.() ? a.timestamp.toDate().toLocaleString() : 'Recently'}
+              </div>
+            </div>
+          </div>
+        `).join('');
+      } catch (e) { console.error(e); }
+    }
+
+    async function loadSeriesList() {
+      try {
+        const result = await DB.getSeries({ limit: 100, sortBy: 'updatedAt' });
+        currentSeries = result.series;
+        renderSeriesTable();
+      } catch (e) { console.error(e); }
+    }
+
+    // Live search across the Manage Series list. Partial, case-insensitive,
+    // matches titles + alternative titles so admins can find a series fast
+    // without scrolling through the entire library.
+    let _seriesSearchQuery = '';
+    function filterSeriesList(query) {
+      _seriesSearchQuery = String(query || '').trim();
+      const clearBtn = document.getElementById('seriesSearchClear');
+      if (clearBtn) clearBtn.style.display = _seriesSearchQuery ? 'block' : 'none';
+      renderSeriesTable();
+    }
+    function clearSeriesSearch() {
+      const inp = document.getElementById('seriesSearchInput');
+      if (inp) inp.value = '';
+      filterSeriesList('');
+    }
+
+    function renderSeriesTable() {
+      const tbody = document.getElementById('seriesTableBody');
+      const meta = document.getElementById('seriesSearchMeta');
+
+      // Apply search filter
+      const q = (_seriesSearchQuery || '').toLowerCase();
+      let list = currentSeries;
+      if (q) {
+        list = currentSeries.filter(s => {
+          const title = String(s.title || '').toLowerCase();
+          const alts = Array.isArray(s.alternativeTitles)
+            ? s.alternativeTitles.join(' ').toLowerCase()
+            : String(s.alternativeTitles || '').toLowerCase();
+          return title.includes(q) || alts.includes(q);
+        });
+      }
+
+      if (meta) {
+        if (q) {
+          meta.style.display = 'block';
+          meta.textContent = `${list.length} match${list.length === 1 ? '' : 'es'} for "${_seriesSearchQuery}"`;
+        } else {
+          meta.style.display = 'none';
+          meta.textContent = '';
+        }
+      }
+
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--text-muted);">${q ? 'No series match your search.' : 'No series found. Add your first series!'}</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = list.map(s => `
+        <tr>
+          <td data-label="Series" style="display:flex;align-items:center;gap:var(--space-sm);">
+            <img src="${s.coverImage || '../images/placeholder.jpg'}" style="width:40px;height:56px;object-fit:cover;border-radius:6px;flex-shrink:0;">
+            <span style="font-weight:500;">${s.title}</span>
+          </td>
+          <td data-label="Status"><span class="genre-tag">${s.status || 'Unknown'}</span></td>
+          <td data-label="Chapters">${s.latestChapter || 0}</td>
+          <td data-label="Views">${s.viewCount || 0}</td>
+          <td data-label="Actions">
+            <button class="btn btn-ghost btn-sm" title="Manage chapters" onclick="openChaptersModal('${s.id}')"><i class="fas fa-list-ol"></i></button>
+            <button class="btn btn-ghost btn-sm" title="Edit series" onclick="editSeries('${s.id}')"><i class="fas fa-edit"></i></button>
+            <button class="btn btn-ghost btn-sm" title="Delete series" style="color:var(--error);" onclick="deleteSeries('${s.id}')"><i class="fas fa-trash-alt"></i></button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function loadUsersList() {
+      try {
+        const snapshot = await db.collection('users').orderBy('createdAt', 'desc').limit(200).get();
+        currentUsers = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderUsersTable();
+      } catch (e) {
+        console.error(e);
+        const host = document.getElementById('usersTableBody');
+        if (host) host.innerHTML = '<p style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--error);">Failed to load users.</p>';
+      }
+    }
+
+    function _escAttr(s) { return String(s ?? '').replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
+    function _escHtml(s) {
+      return String(s ?? '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function renderUsersTable() {
+      const host = document.getElementById('usersTableBody');
+      if (!host) return;
+      const q = (document.getElementById('usersSearchInput')?.value || '').trim().toLowerCase();
+      const filtered = q
+        ? currentUsers.filter(u => {
+            const name = String(u.username || u.displayName || '').toLowerCase();
+            const email = String(u.email || '').toLowerCase();
+            return name.includes(q) || email.includes(q);
+          })
+        : currentUsers;
+
+      if (filtered.length === 0) {
+        host.innerHTML = '<p style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--text-muted);">No users found.</p>';
+        return;
+      }
+
+      host.innerHTML = filtered.map(u => {
+        const safeName = _escAttr(u.username || '');
+        const role = u.role || 'user';
+        const joined = u.createdAt?.toDate?.() ? u.createdAt.toDate().toLocaleDateString() : 'N/A';
+        const level = (typeof u.level === 'number' && u.level > 0)
+          ? u.level
+          : (window.EXPSystem ? EXPSystem.levelFromExp(u.exp || 0) : 1);
+        const exp = u.exp || 0;
+        const banned = !!u.banned;
+
+        return `
+          <div class="user-card" data-uid="${_escAttr(u.id)}">
+            <div class="user-card__head">
+              <img class="user-card__avatar" src="${_escAttr(u.avatar || '../images/default-avatar.png')}" alt="">
+              <div style="min-width:0;flex:1;">
+                <div class="user-card__name" title="${_escAttr(u.username || 'Unknown')}">${_escHtml(u.username || 'Unknown')}</div>
+                <div class="user-card__meta">
+                  <span class="genre-tag ${role === 'admin' ? 'status-ongoing' : ''}">${_escHtml(role)}</span>
+                  <span>Joined ${_escHtml(joined)}</span>
+                  ${banned ? '<span style="color:var(--error);">Banned</span>' : ''}
+                </div>
+              </div>
+            </div>
+
+            <div class="user-card__email" title="${_escAttr(u.email || '')}">${_escHtml(u.email || '—')}</div>
+
+            <div class="user-card__stats">
+              <span class="user-card__stat">Level <strong>${level}</strong></span>
+              <span class="user-card__stat">EXP <strong>${exp.toLocaleString()}</strong></span>
+              <span class="user-card__stat">Chapters <strong>${u.chaptersReadCount || 0}</strong></span>
+            </div>
+
+            <div class="user-card__actions">
+              <button class="btn btn-ghost btn-sm" title="Warn user" onclick="openWarnUserDialog('${_escAttr(u.id)}','${safeName}')"><i class="fas fa-exclamation-triangle" style="color:#f59e0b;"></i></button>
+              <button class="btn btn-ghost btn-sm" title="View warnings" onclick="openWarningHistory('${_escAttr(u.id)}','${safeName}')"><i class="fas fa-history"></i></button>
+              <button class="btn btn-ghost btn-sm" title="Manage XP & Level" onclick="openXpDialog('${_escAttr(u.id)}','${safeName}')"><i class="fas fa-bolt" style="color:#8b5cf6;"></i> XP</button>
+              ${role !== 'admin' ? `
+                <button class="btn btn-ghost btn-sm" onclick="setUserRole('${_escAttr(u.id)}', '${role === 'moderator' ? 'user' : 'moderator'}')">
+                  ${role === 'moderator' ? 'Demote' : 'Make Mod'}
+                </button>
+                <button class="btn btn-ghost btn-sm" style="color:var(--error);" title="Ban user" onclick="banUser('${_escAttr(u.id)}')"><i class="fas fa-ban"></i></button>
+              ` : '<span style="color:var(--text-muted);font-size:0.75rem;align-self:center;">Admin</span>'}
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    // ==================== ADMIN: XP & LEVEL MANAGEMENT ====================
+    // Admins only. Lets staff add/remove/set a user's EXP and level.
+    async function openXpDialog(userId, username) {
+      // Hard gate: admins only. Moderators are explicitly excluded unless
+      // they have been granted the optional `canManageXp` flag on their user doc.
+      try {
+        const me = (typeof Auth !== 'undefined' && Auth.userData) || null;
+        const isAdmin = me?.role === 'admin';
+        const modAllowed = me?.role === 'moderator' && me?.canManageXp === true;
+        if (!isAdmin && !modAllowed) {
+          showToast('Only admins can manage XP and levels.', 'error');
+          return;
+        }
+      } catch (_) {}
+
+      const snap = await db.collection('users').doc(userId).get();
+      const data = snap.exists ? (snap.data() || {}) : {};
+      const curExp = Number(data.exp || 0);
+      const curLevel = (typeof data.level === 'number' && data.level > 0)
+        ? data.level
+        : (window.EXPSystem ? EXPSystem.levelFromExp(curExp) : 1);
+
+      const action = prompt(
+        `Manage XP & Level for "${username}"\n` +
+        `Current: Level ${curLevel} • ${curExp} XP\n\n` +
+        `Choose an action by typing its number:\n` +
+        `  1) Add XP\n  2) Remove XP\n  3) Set XP\n` +
+        `  4) Increase Level by 1\n  5) Decrease Level by 1\n  6) Set Level`,
+        '1'
+      );
+      if (!action) return;
+
+      let updates = null;
+      try {
+        if (action === '1' || action === '2' || action === '3') {
+          const raw = prompt(action === '3' ? 'Set XP to (total):' : 'Amount of XP:', action === '3' ? String(curExp) : '100');
+          const amount = Math.max(0, Math.floor(Number(raw)));
+          if (!Number.isFinite(amount)) throw new Error('Invalid XP amount');
+          let newExp;
+          if (action === '1') newExp = curExp + amount;
+          else if (action === '2') newExp = Math.max(0, curExp - amount);
+          else newExp = amount;
+          const newLevel = window.EXPSystem ? EXPSystem.levelFromExp(newExp) : curLevel;
+          updates = { exp: newExp, level: newLevel };
+        } else if (action === '4' || action === '5' || action === '6') {
+          let newLevel;
+          if (action === '4') newLevel = curLevel + 1;
+          else if (action === '5') newLevel = Math.max(1, curLevel - 1);
+          else {
+            const raw = prompt('Set level to:', String(curLevel));
+            newLevel = Math.max(1, Math.floor(Number(raw)));
+            if (!Number.isFinite(newLevel)) throw new Error('Invalid level');
+          }
+          // Anchor EXP to the floor of the chosen level so subsequent reads
+          // don't snap the user back down.
+          const xpAtLevel = window.EXPSystem ? EXPSystem.xpForLevel(newLevel) : curExp;
+          const newExp = Math.max(curExp, xpAtLevel);
+          updates = { exp: newExp, level: newLevel };
+        } else {
+          showToast('Cancelled', 'info');
+          return;
+        }
+
+        await db.collection('users').doc(userId).set(updates, { merge: true });
+        showToast(`Updated ${username}: Lv ${updates.level} • ${updates.exp} XP`, 'success');
+        loadUsersList();
+      } catch (e) {
+        showToast('XP update failed: ' + e.message, 'error');
+      }
+    }
+
+
+    async function loadSeriesOptions() {
+      try {
+        const result = await DB.getSeries({ limit: 500, sortBy: 'title', sortOrder: 'asc' });
+        const options = result.series.map(s => `<option value="${s.id}">${s.title}</option>`).join('');
+        
+        document.getElementById('importSeriesSelect').innerHTML = '<option value="">Select Series...</option>' + options;
+        document.getElementById('manualSeries').innerHTML = '<option value="">Select...</option>' + options;
+        document.getElementById('notifTarget').innerHTML = '<option value="all">All Users</option>' + 
+          result.series.map(s => `<option value="${s.id}">Followers of ${s.title}</option>`).join('');
+      } catch (e) { console.error(e); }
+    }
+
+    function loadSupportedSources() {
+      const container = document.getElementById('supportedSourcesList');
+      if (!container) return;
+
+      // Wait for SourceRegistry to be ready
+      const renderSources = () => {
+        const sources = window.SourceRegistry?.getSupportedDomains() || [];
+        
+        if (sources.length === 0) {
+          container.innerHTML = '<span style="color:var(--text-muted);font-size:0.875rem;">No source plugins registered. Create a source plugin using the template in <code>sources/source-template.js</code></span>';
+          return;
+        }
+
+        container.innerHTML = sources.map(s => `
+          <div style="display:inline-flex;align-items:center;gap:var(--space-xs);padding:var(--space-xs) var(--space-md);background:var(--bg-tertiary);border-radius:var(--radius-md);font-size:0.8125rem;border:1px solid var(--bg-hover);">
+            <i class="fas fa-plug" style="color:var(--accent);font-size:0.625rem;"></i>
+            <strong>${s.name}</strong>
+            <span style="color:var(--text-muted);">${s.domain || 'no domain'}</span>
+          </div>
+        `).join('');
+      };
+
+      // SourceRegistry may already be initialized, or may initialize shortly
+      if (window.SourceRegistry?.sources?.length > 0) {
+        renderSources();
+      } else {
+        // Listen for registryReady event or check after a short delay
+        const onReady = () => {
+          renderSources();
+          window.SourceRegistry.removeEventListener('registryReady', onReady);
+        };
+        
+        if (window.SourceRegistry) {
+          window.SourceRegistry.addEventListener('registryReady', onReady);
+          // Fallback: also try after a delay in case the event already fired
+          setTimeout(renderSources, 2000);
+        } else {
+          // SourceRegistry not loaded yet, retry after delay
+          setTimeout(() => {
+            if (window.SourceRegistry?.sources?.length > 0) {
+              renderSources();
+            } else {
+              container.innerHTML = '<span style="color:var(--text-muted);font-size:0.875rem;">Source registry not available. Ensure source scripts are loaded.</span>';
+            }
+          }, 3000);
+        }
+      }
+    }
+
+    // ------- Banner image helpers -------
+    function updateBannerPreview(url) {
+      const wrap = document.getElementById('formBannerPreviewWrap');
+      const img  = document.getElementById('formBannerPreview');
+      const rm   = document.getElementById('formBannerRemoveBtn');
+      const clean = (url || '').trim();
+      if (clean) {
+        img.src = clean;
+        wrap.style.display = 'block';
+        rm.style.display = 'inline-flex';
+      } else {
+        img.removeAttribute('src');
+        wrap.style.display = 'none';
+        rm.style.display = 'none';
+      }
+    }
+    function removeBannerImage() {
+      document.getElementById('formBanner').value = '';
+      updateBannerPreview('');
+    }
+    async function handleBannerFileUpload(file) {
+      const status = document.getElementById('formBannerUploadStatus');
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        status.textContent = 'Please choose an image file.';
+        return;
+      }
+      if (file.size > 8 * 1024 * 1024) {
+        status.textContent = 'Image is larger than 8 MB.';
+        return;
+      }
+      if (!firebase.storage) {
+        status.textContent = 'Storage SDK not loaded — paste a URL instead.';
+        return;
+      }
+      try {
+        status.textContent = 'Uploading…';
+        const id = document.getElementById('seriesEditId').value || ('new-' + Date.now());
+        const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+        const path = `banners/${id}_${Date.now()}.${ext}`;
+        const ref  = firebase.storage().ref().child(path);
+        const snap = await ref.put(file, { contentType: file.type, cacheControl: 'public,max-age=31536000' });
+        const url  = await snap.ref.getDownloadURL();
+        document.getElementById('formBanner').value = url;
+        updateBannerPreview(url);
+        status.textContent = 'Uploaded ✓';
+      } catch (e) {
+        console.error('[banner upload]', e);
+        status.textContent = 'Upload failed: ' + (e.message || e);
+      }
+    }
+    // Wire URL field + file input once (modal is reused).
+    document.addEventListener('DOMContentLoaded', () => {
+      const urlInput  = document.getElementById('formBanner');
+      const fileInput = document.getElementById('formBannerFile');
+      if (urlInput)  urlInput.addEventListener('input', e => updateBannerPreview(e.target.value));
+      if (fileInput) fileInput.addEventListener('change', e => {
+        const f = e.target.files && e.target.files[0];
+        if (f) handleBannerFileUpload(f);
+        e.target.value = ''; // allow re-upload of same file
+      });
+    });
+
+    function openSeriesModal(seriesId = null) {
+      document.getElementById('seriesForm').reset();
+      document.getElementById('seriesEditId').value = '';
+      document.getElementById('seriesModalTitle').textContent = 'Add Series';
+      updateBannerPreview('');
+      const status = document.getElementById('formBannerUploadStatus');
+      if (status) status.textContent = '';
+
+      if (seriesId) {
+        const series = currentSeries.find(s => s.id === seriesId);
+        if (series) {
+          document.getElementById('seriesEditId').value = series.id;
+          document.getElementById('seriesModalTitle').textContent = 'Edit Series';
+          document.getElementById('formTitle').value = series.title || '';
+          document.getElementById('formAltTitles').value = series.alternativeTitles?.join(', ') || '';
+          document.getElementById('formAuthor').value = series.author || '';
+          document.getElementById('formArtist').value = series.artist || '';
+          document.getElementById('formStatus').value = series.status || 'Ongoing';
+          document.getElementById('formYear').value = series.releaseYear || '';
+          document.getElementById('formGenres').value = series.genres?.join(', ') || '';
+          document.getElementById('formCover').value = series.coverImage || '';
+          document.getElementById('formSynopsis').value = series.synopsis || '';
+          const banner = series.bannerImage || series.banner || '';
+          document.getElementById('formBanner').value = banner;
+          updateBannerPreview(banner);
+        }
+      }
+
+      UI.openModal('seriesModal');
+    }
+
+    function editSeries(seriesId) {
+      openSeriesModal(seriesId);
+    }
+
+    async function saveSeries() {
+      const id = document.getElementById('seriesEditId').value;
+      const bannerVal = document.getElementById('formBanner').value.trim();
+      const data = {
+        title: document.getElementById('formTitle').value.trim(),
+        alternativeTitles: document.getElementById('formAltTitles').value.split(',').map(s => s.trim()).filter(Boolean),
+        author: document.getElementById('formAuthor').value.trim(),
+        artist: document.getElementById('formArtist').value.trim(),
+        status: document.getElementById('formStatus').value,
+        releaseYear: parseInt(document.getElementById('formYear').value) || null,
+        genres: document.getElementById('formGenres').value.split(',').map(s => s.trim()).filter(Boolean),
+        coverImage: document.getElementById('formCover').value.trim(),
+        bannerImage: bannerVal,
+        banner: bannerVal,        // legacy field kept in sync for older code paths
+        synopsis: document.getElementById('formSynopsis').value.trim()
+      };
+
+
+
+      if (!data.title) {
+        showToast('Title is required', 'warning');
+        return;
+      }
+
+      try {
+        if (id) {
+          await DB.updateSeries(id, data);
+          showToast('Series updated!', 'success');
+        } else {
+          await DB.addSeries(data);
+          showToast('Series added!', 'success');
+        }
+        UI.closeModal('seriesModal');
+        loadSeriesList();
+        loadSeriesOptions();
+      } catch (error) {
+        showToast('Error: ' + error.message, 'error');
+      }
+    }
+
+    async function deleteSeries(seriesId) {
+      if (!confirm('Delete this series and all its chapters? This cannot be undone!')) return;
+
+      try {
+        await DB.deleteSeries(seriesId);
+        showToast('Series deleted', 'success');
+        loadSeriesList();
+      } catch (error) {
+        showToast('Error: ' + error.message, 'error');
+      }
+    }
+
+    async function handleManualImport() {
+      const seriesId = document.getElementById('manualSeries').value;
+      const chapterNumber = parseFloat(document.getElementById('manualChapterNum').value);
+      const chapterTitle = document.getElementById('manualChapterTitle').value.trim();
+      const imageUrls = document.getElementById('manualImageUrls').value.split('\n').map(u => u.trim()).filter(Boolean);
+
+      if (!seriesId || !chapterNumber || imageUrls.length === 0) {
+        showToast('Please fill in all required fields', 'warning');
+        return;
+      }
+
+      const result = await ImportTool.manualImport(seriesId, chapterNumber, chapterTitle, imageUrls);
+      if (result) {
+        document.getElementById('manualImportForm').reset();
+      }
+    }
+
+    async function sendNotification() {
+      const target = document.getElementById('notifTarget').value;
+      const title = document.getElementById('notifTitle').value.trim();
+      const message = document.getElementById('notifMessage').value.trim();
+      const type = document.getElementById('notifType').value;
+
+      if (!title || !message) {
+        showToast('Title and message are required', 'warning');
+        return;
+      }
+
+      try {
+        const me = Auth.getUserData ? Auth.getUserData() : null;
+        if (target === 'all') {
+          await DB.createNotification({
+            userId: 'all',
+            title,
+            message,
+            type,
+            postedBy: auth.currentUser ? auth.currentUser.uid : null,
+            postedByName: (me && (me.username || me.displayName)) || 'Admin',
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        }
+        showToast('Notification sent!', 'success');
+        document.getElementById('notificationForm').reset();
+      } catch (error) {
+        showToast('Error: ' + error.message, 'error');
+      }
+    }
+
+    async function setUserRole(userId, role) {
+      try {
+        await db.collection('users').doc(userId).update({ role });
+        showToast('User role updated', 'success');
+        loadUsersList();
+      } catch (error) {
+        showToast('Error: ' + error.message, 'error');
+      }
+    }
+
+    async function banUser(userId) {
+      if (!confirm('Ban this user? They will be unable to login.')) return;
+      try {
+        await db.collection('users').doc(userId).update({ banned: true, role: 'banned' });
+        showToast('User banned', 'success');
+        loadUsersList();
+      } catch (error) {
+        showToast('Error: ' + error.message, 'error');
+      }
+    }
+
+    // ==================== MANAGE CHAPTERS ====================
+    // Per-chapter delete + multi-select + bulk delete + re-import.
+    // Available to admins & moderators (page already gates entry to admins;
+    // moderators inherit the same UI when allowed in via auth.js role checks).
+    let chaptersModalState = { seriesId: null, seriesTitle: '', chapters: [], selected: new Set() };
+
+    async function openChaptersModal(seriesId) {
+      const series = currentSeries.find(s => s.id === seriesId);
+      chaptersModalState = { seriesId, seriesTitle: series?.title || '', chapters: [], selected: new Set() };
+      document.getElementById('chaptersModalSeriesTitle').textContent = series ? ` — ${series.title}` : '';
+      document.getElementById('chaptersList').innerHTML =
+        '<div style="display:flex;justify-content:center;padding:2rem;"><div class="spinner"></div></div>';
+      document.getElementById('chaptersSelectAll').checked = false;
+      updateChaptersSelectionUi();
+      UI.openModal('chaptersModal');
+
+      try {
+        // Pull a generous batch — typical series fit in one page; loop if needed.
+        let all = [];
+        let cursor = null;
+        for (let i = 0; i < 20; i++) {
+          const res = await DB.getChapters(seriesId, { limit: 200, cursor });
+          all = all.concat(res.chapters || []);
+          if (!res.hasMore || !res.lastCursor) break;
+          cursor = res.lastCursor;
+        }
+        chaptersModalState.chapters = all;
+        renderChaptersList();
+      } catch (e) {
+        console.error(e);
+        document.getElementById('chaptersList').innerHTML =
+          `<p style="padding:1rem;color:var(--error);">Failed to load chapters: ${e.message}</p>`;
+      }
+    }
+
+    function escapeHtml(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => (
+        { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]
+      ));
+    }
+
+    function renderChaptersList() {
+      const list = chaptersModalState.chapters;
+      const container = document.getElementById('chaptersList');
+      if (!list.length) {
+        container.innerHTML = '<p style="padding:1.5rem;text-align:center;color:var(--text-muted);">No chapters imported for this series yet.</p>';
+        return;
+      }
+      container.innerHTML = list.map(ch => {
+        const checked = chaptersModalState.selected.has(ch.id) ? 'checked' : '';
+        const pages = Array.isArray(ch.imageUrls) ? ch.imageUrls.length : 0;
+        const title = escapeHtml(ch.title || `Chapter ${ch.chapterNumber ?? ''}`);
+        return `
+          <div class="chapter-row" data-id="${ch.id}"
+               style="display:flex;align-items:center;gap:var(--space-sm);padding:var(--space-sm) var(--space-md);border-bottom:1px solid var(--bg-tertiary);">
+            <input type="checkbox" class="chapter-check" data-id="${ch.id}" ${checked}
+                   onchange="toggleChapterSelection('${ch.id}', this.checked)">
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:500;">Ch. ${escapeHtml(ch.chapterNumber ?? '?')} — ${title}</div>
+              <div style="font-size:0.75rem;color:var(--text-muted);">${pages} page${pages === 1 ? '' : 's'}${ch.sourceUrl ? ' · imported' : ''}</div>
+            </div>
+            <button class="btn btn-ghost btn-sm" title="Delete chapter" style="color:var(--error);flex-shrink:0;"
+                    onclick="deleteSingleChapter('${ch.id}')">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function updateChaptersSelectionUi() {
+      const n = chaptersModalState.selected.size;
+      document.getElementById('chaptersSelectionInfo').textContent = `${n} selected`;
+      document.getElementById('chaptersBulkDeleteBtn').disabled = n === 0;
+      document.getElementById('chaptersReimportBtn').disabled = n === 0;
+    }
+
+    function toggleChapterSelection(id, checked) {
+      if (checked) chaptersModalState.selected.add(id);
+      else chaptersModalState.selected.delete(id);
+      updateChaptersSelectionUi();
+    }
+
+    function toggleSelectAllChapters(checked) {
+      chaptersModalState.selected = new Set(checked ? chaptersModalState.chapters.map(c => c.id) : []);
+      document.querySelectorAll('#chaptersList .chapter-check').forEach(cb => { cb.checked = checked; });
+      updateChaptersSelectionUi();
+    }
+
+    async function deleteSingleChapter(chapterId) {
+      const ch = chaptersModalState.chapters.find(c => c.id === chapterId);
+      const label = ch ? `Chapter ${ch.chapterNumber ?? ''}`.trim() : 'this chapter';
+      if (!confirm(`Delete ${label}? Pages, comments and progress for it will be lost. This cannot be undone.`)) return;
+      try {
+        await DB.deleteChapter(chapterId);
+        chaptersModalState.chapters = chaptersModalState.chapters.filter(c => c.id !== chapterId);
+        chaptersModalState.selected.delete(chapterId);
+        renderChaptersList();
+        updateChaptersSelectionUi();
+        await refreshSeriesChapterCount(chaptersModalState.seriesId);
+        showToast('Chapter deleted', 'success');
+      } catch (e) {
+        showToast('Delete failed: ' + e.message, 'error');
+      }
+    }
+
+    async function bulkDeleteChapters() {
+      const ids = [...chaptersModalState.selected];
+      if (!ids.length) return;
+      if (!confirm(`Delete ${ids.length} selected chapter${ids.length === 1 ? '' : 's'}? This cannot be undone.`)) return;
+      let ok = 0, fail = 0;
+      for (const id of ids) {
+        try { await DB.deleteChapter(id); ok++; }
+        catch (e) { console.error('deleteChapter', id, e); fail++; }
+      }
+      chaptersModalState.chapters = chaptersModalState.chapters.filter(c => !chaptersModalState.selected.has(c.id));
+      chaptersModalState.selected.clear();
+      document.getElementById('chaptersSelectAll').checked = false;
+      renderChaptersList();
+      updateChaptersSelectionUi();
+      await refreshSeriesChapterCount(chaptersModalState.seriesId);
+      showToast(`Deleted ${ok} chapter${ok === 1 ? '' : 's'}${fail ? `, ${fail} failed` : ''}`, fail ? 'warning' : 'success');
+    }
+
+    async function reimportSelectedChapters() {
+      const selected = chaptersModalState.chapters.filter(c => chaptersModalState.selected.has(c.id) && c.sourceUrl);
+      if (!selected.length) {
+        showToast('No selected chapters have a source URL to re-import from.', 'warning');
+        return;
+      }
+      if (!window.ImportTool?.importChapter) {
+        showToast("Re-import isn't wired up — please re-import manually from the Import tab.", 'error');
+        return;
+      }
+      let ok = 0, fail = 0;
+      for (const ch of selected) {
+        try {
+          // Delete first so the re-import writes a fresh chapter with current image URLs.
+          await DB.deleteChapter(ch.id);
+          await window.ImportTool.importChapter(chaptersModalState.seriesId, ch.sourceUrl, { silent: true });
+          ok++;
+        } catch (e) { console.error('reimport', ch, e); fail++; }
+      }
+      showToast(`Re-imported ${ok}${fail ? `, ${fail} failed` : ''}`, fail ? 'warning' : 'success');
+      await openChaptersModal(chaptersModalState.seriesId); // reload list & counts
+    }
+
+    async function refreshSeriesChapterCount(seriesId) {
+      try {
+        // Recompute latestChapter & chapter count from remaining chapters.
+        const res = await DB.getChapters(seriesId, { limit: 1 });
+        const latest = res.chapters[0]?.chapterNumber || 0;
+        await DB.updateSeries(seriesId, { latestChapter: latest }, { silent: true });
+        await loadSeriesList();
+      } catch (e) { console.warn('refreshSeriesChapterCount failed:', e); }
+    }
+  </script>
+  <script src="../js/shared-header.js"></script>
+
+  <script>
+    // ===== User Title Management (admin) =====
+    let currentTitleUser = null;
+
+    async function loadTitleSettings() {
+      try {
+        const cfg = await Donation.getConfig();
+        const d = document.getElementById('donatorDurationInput');
+        const p = document.getElementById('donatorPaypalInput');
+        const e = document.getElementById('donatorEmailInput');
+        if (d) d.value = cfg.donatorDurationDays;
+        if (p) p.value = cfg.paypalUrl;
+        if (e) e.value = cfg.contactEmail;
+      } catch (err) { console.error(err); }
+    }
+
+    async function saveDonationConfig() {
+      try {
+        const patch = {
+          donatorDurationDays: Number(document.getElementById('donatorDurationInput').value) || 30,
+          paypalUrl: document.getElementById('donatorPaypalInput').value.trim() || Donation.PAYPAL_URL,
+          contactEmail: document.getElementById('donatorEmailInput').value.trim() || Donation.CONTACT_EMAIL,
+        };
+        await Donation.setConfig(patch);
+        showToast('Donation settings saved', 'success');
+      } catch (err) {
+        console.error(err);
+        showToast('Failed to save settings: ' + err.message, 'error');
+      }
+    }
+
+    async function lookupTitleUser() {
+      const q = document.getElementById('titleUserSearch').value.trim();
+      const panel = document.getElementById('titleUserPanel');
+      if (!q) { showToast('Enter a username', 'error'); return; }
+      panel.style.display = 'block';
+      panel.innerHTML = '<div class="spinner" style="margin:1rem auto;"></div>';
+      try {
+        const u = await Donation.findUserByUsername(q);
+        if (!u) { panel.innerHTML = '<p style="color:var(--error);">No user found with that username.</p>'; return; }
+        currentTitleUser = u;
+        renderTitleUserPanel();
+      } catch (err) {
+        console.error(err);
+        panel.innerHTML = `<p style="color:var(--error);">Lookup failed: ${err.message}</p>`;
+      }
+    }
+
+    function renderTitleUserPanel() {
+      const u = currentTitleUser;
+      const panel = document.getElementById('titleUserPanel');
+      const titles = u.customTitles || {};
+      const now = Date.now();
+      const rows = Donation.CUSTOM_TITLES.map(t => {
+        const e = titles[t.id] || {};
+        const expMs = e.expiresAt?.toMillis?.() ?? e.expiresAt ?? null;
+        const active = e.active && (!expMs || expMs > now);
+        const expired = e.active && expMs && expMs < now;
+        const status = active
+          ? `<span style="color:var(--success);font-weight:600;">Active${expMs ? ' · until ' + new Date(expMs).toLocaleDateString() : ' · permanent'}</span>`
+          : expired ? '<span style="color:var(--warning);">Expired</span>'
+          : '<span style="color:var(--text-muted);">Not granted</span>';
+        const durationField = t.supportsExpiry
+          ? `<input type="number" min="1" max="3650" placeholder="days (default)" id="dur-${t.id}" class="form-input" style="width:140px;display:inline-block;">`
+          : '';
+        return `
+          <div style="padding:var(--space-md);border:1px solid var(--bg-hover);border-radius:var(--radius-md);margin-bottom:var(--space-sm);">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:var(--space-md);flex-wrap:wrap;margin-bottom:8px;">
+              <div>${Donation.renderCustomTitleBadge(t.id)} <span style="margin-left:8px;">${status}</span></div>
+            </div>
+            <div style="display:flex;gap:var(--space-sm);flex-wrap:wrap;align-items:center;">
+              ${durationField}
+              <button class="btn btn-primary btn-sm" onclick="grantTitleAction('${t.id}')"><i class="fas fa-plus"></i> Grant</button>
+              ${t.supportsExpiry ? `<button class="btn btn-ghost btn-sm" onclick="extendTitleAction('${t.id}')"><i class="fas fa-clock"></i> Extend</button>` : ''}
+              <button class="btn btn-ghost btn-sm" style="color:var(--error);" onclick="removeTitleAction('${t.id}')"><i class="fas fa-times"></i> Remove</button>
+            </div>
+          </div>`;
+      }).join('');
+      panel.innerHTML = `
+        <div style="display:flex;align-items:center;gap:var(--space-md);margin-bottom:var(--space-md);">
+          <img src="${u.avatar || '../images/default-avatar.png'}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;">
+          <div>
+            <div style="font-weight:700;">${u.username || 'Unknown'}</div>
+            <div style="font-size:0.8rem;color:var(--text-muted);">${u.email || ''} · ${u.id}</div>
+          </div>
+        </div>
+        ${rows}
+      `;
+    }
+
+    async function refreshCurrentTitleUser() {
+      if (!currentTitleUser) return;
+      const snap = await db.collection('users').doc(currentTitleUser.id).get();
+      currentTitleUser = { id: snap.id, ...snap.data() };
+      renderTitleUserPanel();
+    }
+
+    async function grantTitleAction(titleId) {
+      if (!currentTitleUser) return;
+      try {
+        const inp = document.getElementById(`dur-${titleId}`);
+        const days = inp && inp.value ? Number(inp.value) : null;
+        await Donation.grantTitle(currentTitleUser.id, titleId, days);
+        showToast(`Granted ${titleId.toUpperCase()}`, 'success');
+        await refreshCurrentTitleUser();
+      } catch (err) { console.error(err); showToast('Failed: ' + err.message, 'error'); }
+    }
+
+    async function extendTitleAction(titleId) {
+      if (!currentTitleUser) return;
+      try {
+        const inp = document.getElementById(`dur-${titleId}`);
+        const days = inp && inp.value ? Number(inp.value) : (await Donation.getConfig()).donatorDurationDays;
+        await Donation.extendTitle(currentTitleUser.id, titleId, days);
+        showToast(`Extended ${titleId.toUpperCase()} by ${days} day(s)`, 'success');
+        await refreshCurrentTitleUser();
+      } catch (err) { console.error(err); showToast('Failed: ' + err.message, 'error'); }
+    }
+
+    async function removeTitleAction(titleId) {
+      if (!currentTitleUser) return;
+      if (!confirm(`Remove ${titleId.toUpperCase()} from ${currentTitleUser.username}?`)) return;
+      try {
+        await Donation.removeTitle(currentTitleUser.id, titleId);
+        showToast(`Removed ${titleId.toUpperCase()}`, 'success');
+        await refreshCurrentTitleUser();
+      } catch (err) { console.error(err); showToast('Failed: ' + err.message, 'error'); }
+    }
+
+    async function loadDonatorList() {
+      const panel = document.getElementById('donatorListPanel');
+      if (!panel) return;
+      panel.innerHTML = '<div class="spinner" style="margin:1rem auto;"></div>';
+      try {
+        const users = await Donation.listDonatorUsers();
+        if (!users.length) {
+          panel.innerHTML = '<p style="color:var(--text-muted);margin:0;">No users currently hold the DONATOR title.</p>';
+          return;
+        }
+        panel.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-sm);">
+            <span style="color:var(--text-secondary);font-size:0.85rem;">${users.length} donator${users.length === 1 ? '' : 's'}</span>
+          </div>
+          ${users.map(u => {
+            const selectedBadge = u.selectedTitleId
+              ? (EXPSystem.renderTitleBadge(u.selectedTitleId) || Donation.renderCustomTitleBadge(u.selectedTitleId))
+              : '<span style="color:var(--text-muted);font-size:0.8rem;">No title selected</span>';
+            const expLabel = u.expiresAt
+              ? `until ${new Date(u.expiresAt).toLocaleDateString()}`
+              : 'permanent';
+            const safeName = String(u.username).replace(/'/g, "\\'");
+            return `
+              <div style="padding:var(--space-md);border:1px solid var(--bg-hover);border-radius:var(--radius-md);margin-bottom:var(--space-sm);display:flex;gap:var(--space-md);align-items:center;flex-wrap:wrap;cursor:pointer;"
+                   onclick="openDonatorFromList('${safeName}')">
+                <img src="${u.avatar}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;">
+                <div style="flex:1;min-width:160px;">
+                  <div style="font-weight:700;">${u.username}</div>
+                  <div style="font-size:0.78rem;color:var(--text-muted);">${u.email || ''}</div>
+                  <div style="margin-top:4px;font-size:0.78rem;color:var(--text-secondary);">
+                    Currently displays: ${selectedBadge}
+                  </div>
+                </div>
+                <div style="text-align:right;">
+                  ${Donation.renderCustomTitleBadge('donator')}
+                  <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">${expLabel}</div>
+                </div>
+              </div>`;
+          }).join('')}
+        `;
+      } catch (err) {
+        console.error(err);
+        panel.innerHTML = `<p style="color:var(--error);">Failed to load donator list: ${err.message}</p>`;
+      }
+    }
+
+    function openDonatorFromList(username) {
+      const input = document.getElementById('titleUserSearch');
+      if (input) input.value = username;
+      lookupTitleUser();
+    }
+
+    // ==================== USER WARNING SYSTEM ====================
+    // Lightweight modal — built on the fly so existing styles aren't touched.
+
+    function _buildWarningModal() {
+      let m = document.getElementById('userWarningModal');
+      if (m) return m;
+      m = document.createElement('div');
+      m.id = 'userWarningModal';
+      m.style.cssText = 'display:none;visibility:hidden;opacity:0;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.75);align-items:center;justify-content:center;padding:1rem;';
+      m.innerHTML = `
+        <div style="max-width:520px;width:100%;background:var(--bg-card,#141414);border:1px solid var(--border-color,#2a2a2a);border-radius:12px;padding:1.25rem;max-height:90vh;overflow:auto;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+            <h3 style="margin:0;font-size:1.1rem;"><i class="fas fa-exclamation-triangle" style="color:#f59e0b;"></i> <span id="warnModalTitle">Warn user</span></h3>
+            <button type="button" data-close style="background:transparent;border:0;color:#888;cursor:pointer;font-size:1.3rem;">&times;</button>
+          </div>
+          <div id="warnModalBody"></div>
+        </div>`;
+      document.body.appendChild(m);
+      m.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => _hideWarningModal()));
+      m.addEventListener('click', (e) => { if (e.target === m) _hideWarningModal(); });
+      return m;
+    }
+    function _showWarningModal() {
+      const m = _buildWarningModal();
+      m.style.display = 'flex'; m.style.visibility = 'visible'; m.style.opacity = '1';
+    }
+    function _hideWarningModal() {
+      const m = document.getElementById('userWarningModal');
+      if (!m) return;
+      m.style.display = 'none'; m.style.visibility = 'hidden'; m.style.opacity = '0';
+    }
+
+    const WARNING_REASONS = [
+      'Inappropriate language',
+      'Harassment',
+      'Spam',
+      'Hate speech',
+      'NSFW content',
+      'Spoilers without warning',
+      'Off-topic',
+      'Other'
+    ];
+
+    async function openWarnUserDialog(userId, username) {
+      if (!userId) { showToast('Missing user id', 'error'); return; }
+      _showWarningModal();
+      const m = document.getElementById('userWarningModal');
+      m.querySelector('#warnModalTitle').textContent = `Warn ${username || 'user'}`;
+      m.querySelector('#warnModalBody').innerHTML = `
+        <label class="form-label" style="display:block;margin-bottom:.4rem;">Reason</label>
+        <select id="warnReason" class="form-input" style="width:100%;margin-bottom:.75rem;">
+          ${WARNING_REASONS.map(r => `<option value="${r}">${r}</option>`).join('')}
+        </select>
+        <label class="form-label" style="display:block;margin-bottom:.4rem;">Notes (optional)</label>
+        <textarea id="warnNotes" class="form-input" rows="3" style="width:100%;resize:vertical;" placeholder="Context for the user and staff record…"></textarea>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1rem;gap:.5rem;flex-wrap:wrap;">
+          <button type="button" class="btn btn-ghost btn-sm" onclick="openWarningHistory('${userId}', '${(username||'').replace(/'/g,"\\'")}')">View history</button>
+          <div style="display:flex;gap:.5rem;">
+            <button type="button" class="btn btn-ghost btn-sm" data-close>Cancel</button>
+            <button type="button" class="btn btn-primary btn-sm" id="warnSubmit">Issue Warning</button>
+          </div>
+        </div>`;
+      m.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => _hideWarningModal()));
+      const submit = m.querySelector('#warnSubmit');
+      submit.addEventListener('click', async () => {
+        const reason = m.querySelector('#warnReason').value;
+        const notes = m.querySelector('#warnNotes').value.trim();
+        submit.disabled = true;
+        try {
+          await DB.warnUser(userId, { reason, notes });
+          showToast('Warning issued', 'success');
+          _hideWarningModal();
+        } catch (e) {
+          showToast('Failed: ' + e.message, 'error');
+        } finally {
+          submit.disabled = false;
+        }
+      });
+    }
+
+    async function openWarningHistory(userId, username) {
+      if (!userId) return;
+      _showWarningModal();
+      const m = document.getElementById('userWarningModal');
+      m.querySelector('#warnModalTitle').textContent = `Warning history — ${username || 'user'}`;
+      const body = m.querySelector('#warnModalBody');
+      body.innerHTML = '<div class="spinner" style="margin:1rem auto;"></div>';
+      try {
+        const warnings = await DB.getUserWarnings(userId);
+        if (!warnings.length) {
+          body.innerHTML = `
+            <p style="color:var(--text-muted);">No warnings on record.</p>
+            <div style="display:flex;justify-content:flex-end;gap:.5rem;margin-top:1rem;">
+              <button type="button" class="btn btn-primary btn-sm" onclick="openWarnUserDialog('${userId}','${(username||'').replace(/'/g,"\\'")}')">Issue warning</button>
+              <button type="button" class="btn btn-ghost btn-sm" data-close>Close</button>
+            </div>`;
+        } else {
+          body.innerHTML = `
+            <div style="display:flex;flex-direction:column;gap:.5rem;">
+              ${warnings.map(w => {
+                const when = w.createdAt?.toDate?.() ? w.createdAt.toDate().toLocaleString() : 'Recently';
+                return `
+                  <div style="padding:.6rem .75rem;border:1px solid var(--bg-tertiary);border-radius:8px;">
+                    <div style="display:flex;justify-content:space-between;gap:.5rem;align-items:flex-start;">
+                      <div>
+                        <div style="font-weight:600;">${escapeHtml(w.reason || 'Warning')}</div>
+                        <div style="font-size:.8rem;color:var(--text-muted);">${when} · by ${escapeHtml(w.issuedByName || 'Staff')}</div>
+                        ${w.notes ? `<div style="margin-top:.4rem;font-size:.875rem;color:var(--text-secondary);">${escapeHtml(w.notes)}</div>` : ''}
+                      </div>
+                      <button class="btn btn-ghost btn-sm" style="color:var(--error);" onclick="removeWarning('${w.id}','${userId}','${(username||'').replace(/'/g,"\\'")}')" title="Remove warning"><i class="fas fa-trash"></i></button>
+                    </div>
+                  </div>`;
+              }).join('')}
+            </div>
+            <div style="display:flex;justify-content:space-between;gap:.5rem;margin-top:1rem;">
+              <button type="button" class="btn btn-primary btn-sm" onclick="openWarnUserDialog('${userId}','${(username||'').replace(/'/g,"\\'")}')">Issue new warning</button>
+              <button type="button" class="btn btn-ghost btn-sm" data-close>Close</button>
+            </div>`;
+        }
+        body.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => _hideWarningModal()));
+      } catch (e) {
+        body.innerHTML = `<p style="color:var(--error);">Failed to load warnings: ${escapeHtml(e.message)}</p>`;
+      }
+    }
+
+    async function removeWarning(warningId, userId, username) {
+      if (!confirm('Remove this warning? This cannot be undone.')) return;
+      try {
+        await DB.removeWarning(warningId);
+        showToast('Warning removed', 'success');
+        openWarningHistory(userId, username);
+      } catch (e) {
+        showToast('Failed: ' + e.message, 'error');
+      }
+    }
+  </script>
+</body>
+</html>
